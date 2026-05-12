@@ -2,21 +2,34 @@ import { Migration } from './runner';
 
 export const migration002: Migration = {
   version: '002',
-  description: 'Create attendance collection with schema seed',
+  description: 'Create attendance collection with full punch schema seed',
   async up(db) {
-    const sentinel = db.collection('attendance').doc('__schema__');
-    await sentinel.set({
-      _schemaVersion: 1,
-      _description: 'Attendance punch record shape',
+    await db.collection('attendance').doc('__schema__').set({
+      _schemaVersion: 2,
+      _description: 'Attendance punch event — one doc per IN or OUT event',
       _shape: {
-        id: 'string',
-        userId: 'string',
-        type: 'IN | OUT',
-        timestamp: 'ISO string',
-        date: 'YYYY-MM-DD',
+        userId: 'string — Firebase Auth UID',
+        employeeCode: 'string',
+        dateKey: 'string — YYYY-MM-DD',
+        weekKey: 'string — YYYY-WNN',
+        timezone: 'string',
+        punchType: 'IN | OUT',
+        timestamp: 'Firestore Timestamp',
+        source: 'web | mobile | admin',
+        scheduleSnapshot: {
+          start: 'HH:mm',
+          end: 'HH:mm',
+          breakMinutes: 'number',
+          graceMinutes: 'number',
+        },
+        pairGroup: 'string — dateKey_shift_N groups IN/OUT pairs',
+        isEdited: 'boolean',
+        editedAt: 'ISO string | null',
+        editedBy: 'string uid | null',
         createdAt: 'ISO string',
+        updatedAt: 'ISO string',
       },
-      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
   },
 };

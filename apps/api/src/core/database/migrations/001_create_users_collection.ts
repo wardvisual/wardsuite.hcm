@@ -2,26 +2,30 @@ import { Migration } from './runner';
 
 export const migration001: Migration = {
   version: '001',
-  description: 'Create users collection with schema seed',
+  description: 'Create users collection with full HCM schema seed',
   async up(db) {
-    const sentinel = db.collection('users').doc('__schema__');
-    await sentinel.set({
-      _schemaVersion: 1,
+    await db.collection('users').doc('__schema__').set({
+      _schemaVersion: 2,
       _description: 'User document shape',
       _shape: {
-        id: 'string',
-        email: 'string',
+        uid: 'string — Firebase Auth UID',
+        employeeCode: 'string — EMP-0001',
         name: 'string',
+        email: 'string',
         role: 'ADMIN | MANAGER | STAFF',
-        timezone: 'string (optional)',
+        timezone: 'string — IANA tz (e.g. Asia/Manila)',
+        status: 'active | inactive',
         schedule: {
           start: 'HH:mm',
           end: 'HH:mm',
+          breakMinutes: 'number',
+          graceMinutes: 'number',
         },
         createdAt: 'ISO string',
         updatedAt: 'ISO string',
+        createdBy: 'string — uid of creator',
       },
-      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
   },
 };
