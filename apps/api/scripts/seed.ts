@@ -2,18 +2,31 @@
  * Seed script: creates admin + 2 employee demo accounts in Firebase Auth + Firestore.
  * Run: npm run seed --workspace=api
  */
-import { env } from '@api/lib/env';
-import * as admin from 'firebase-admin';
+import path from 'path';
+import dotenv from 'dotenv';
 
-const projectId = env.firebaseProjectId!;
-const clientEmail = env.firebaseClientEmail!;
-const privateKey = env.firebasePrivateKey!.replace(/\\n/g, '\n');
+// Load root .env explicitly so running from the `apps/api` cwd picks up project vars.
+const envPath = path.resolve(__dirname, '../../../.env');
+dotenv.config({ path: envPath });
+
+const { env } = require('../src/lib/env');
+const admin = require('firebase-admin');
+
+const projectId = env.firebaseProjectId;
+const clientEmail = env.firebaseClientEmail;
+const privateKey = env.firebasePrivateKey?.replace(/\\n/g, '\n');
 
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
-    ...(env.firebaseDatabaseId ? { databaseURL: `https://${projectId}.firebaseio.com` } : {}),
-  });
+  if (projectId && clientEmail && privateKey) {
+    admin.initializeApp({
+      credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
+      ...(env.firebaseDatabaseId ? { databaseURL: `https://${projectId}.firebaseio.com` } : {}),
+    });
+  } else if (projectId) {
+    admin.initializeApp({ projectId });
+  } else {
+    throw new Error('FIREBASE_PROJECT_ID is required to run seed');
+  }
 }
 
 const db = admin.firestore();
