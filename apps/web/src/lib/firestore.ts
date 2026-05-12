@@ -6,91 +6,177 @@ import {
   where,
   orderBy,
   limit,
-  QueryConstraint,
   DocumentData,
 } from 'firebase/firestore';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { firestore } from '@web/lib/firebase';
+import type { AttendancePunch, DailySummary } from '@web/modules/attendance/types/attendance.types';
 
+// ── Generic real-time doc ────────────────────────────────────────────────────
 export function useRealtimeDoc<T extends DocumentData>(path: string | null) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!path) {
+      setData(null);
       setLoading(false);
       return;
     }
+    setLoading(true);
     const ref = doc(firestore, path);
-    const unsub = onSnapshot(ref, (snap) => {
-      setData(snap.exists() ? ({ id: snap.id, ...snap.data() } as T) : null);
+    try {
+      const unsub = onSnapshot(
+        ref,
+        (snap) => {
+          setData(snap.exists() ? ({ id: snap.id, ...snap.data() } as unknown as T) : null);
+          setLoading(false);
+        },
+        (err) => {
+          console.error('[firestore] doc error:', path, err);
+          setLoading(false);
+        },
+      );
+      return unsub;
+    } catch (err) {
+      console.error('[firestore] doc listen error:', path, err);
       setLoading(false);
-    });
-    return unsub;
+      return;
+    }
   }, [path]);
 
   return { data, loading };
 }
 
-export function useRealtimeQuery<T extends DocumentData>(
-  collectionPath: string | null,
-  constraints: QueryConstraint[]
-) {
-  const [data, setData] = useState<T[]>([]);
+// ── Today's punches (real-time) ──────────────────────────────────────────────
+export function useTodayPunches(userId: string | null, dateKey: string) {
+  const [data, setData] = useState<AttendancePunch[]>([]);
   const [loading, setLoading] = useState(true);
-  // Serialize constraints to a stable key so the effect only re-runs when the query actually changes
-  const keyRef = useRef('');
-  const newKey = collectionPath + JSON.stringify(constraints.map((c) => c.type));
 
   useEffect(() => {
-    if (!collectionPath) {
+    if (!userId) {
+      setData([]);
       setLoading(false);
       return;
     }
-    keyRef.current = newKey;
-    const q = query(collection(firestore, collectionPath), ...constraints);
-    const unsub = onSnapshot(q, (snap) => {
-      setData(
-        snap.docs
-          .filter((d) => d.id !== '__schema__')
-          .map((d) => ({ id: d.id, ...d.data() } as T))
+    setLoading(true);
+    const q = query(
+      collection(firestore, 'attendance'),
+      where('userId', '==', userId),
+      where('dateKey', '==', dateKey),
+      orderBy('timestamp', 'asc'),
+    );
+    try {
+      const unsub = onSnapshot(
+        q,
+        (snap) => {
+          setData(
+            snap.docs
+              .filter((d) => d.id !== '_schema')
+              .map((d) => ({ id: d.id, ...d.data() } as unknown as AttendancePunch)),
+          );
+          setLoading(false);
+        },
+        (err) => {
+          console.error('[firestore] today-punches error:', err);
+          setLoading(false);
+        },
       );
+      return unsub;
+    } catch (err) {
+      console.error('[firestore] today-punches listen error:', err);
       setLoading(false);
-    });
-    return unsub;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newKey]);
+      return;
+    }
+  }, [userId, dateKey]);
 
   return { data, loading };
 }
 
-// Convenience: real-time today's punches for a user
-export function useTodayPunches<T extends DocumentData>(userId: string | null, dateKey: string) {
-  return useRealtimeQuery<T>(userId ? 'attendance' : null, [
-    where('userId', '==', userId ?? ''),
-    where('dateKey', '==', dateKey),
-    orderBy('timestamp', 'asc'),
-  ]);
+// ── Daily summary (real-time) ────────────────────────────────────────────────
+export function useDailySummaryRealtime(userId: string | null, dateKey: string) {
+  const [data, setData] = useState<DailySummary | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const ref = doc(firestore, `dailySummary/${userId}_${dateKey}`);
+    try {
+      const unsub = onSnapshot(
+        ref,
+        (snap) => {
+          setData(snap.exists() ? ({ id: snap.id, ...snap.data() } as unknown as DailySummary) : null);
+          setLoading(false);
+        },
+        (err) => {
+          console.error('[firestore] daily-summary error:', err);
+          setLoading(false);
+        },
+      );
+      return unsub;
+    } catch (err) {
+      console.error('[firestore] daily-summary listen error:', err);
+      setLoading(false);
+      return;
+    }
+  }, [userId, dateKey]);
+
+  return { data, loading };
 }
 
-// Convenience: real-time daily summary doc
-export function useDailySummaryRealtime<T extends DocumentData>(
-  userId: string | null,
-  dateKey: string
-) {
-  return useRealtimeDoc<T>(userId ? `dailySummary/${userId}_${dateKey}` : null);
-}
+// ── History (last N daily summaries, real-time) ──────────────────────────────
+export function useHistoryRealtime(userId: string | null, limitCount = 30) {
+  const [data, setData] = useState<DailySummary[]>([]);
+  const [loading, setLoading] = useState(true);
 
-// Convenience: real-time history (last N daily summaries)
-export function useHistoryRealtime<T extends DocumentData>(
-  userId: string | null,
-  limitCount = 30
-) {
-  return useRealtimeQuery<T>(userId ? 'dailySummary' : null, [
-    where('userId', '==', userId ?? ''),
-    orderBy('dateKey', 'desc'),
-    limit(limitCount),
-  ]);
+  useEffect(() => {
+    if (!userId) {
+      setData([]);
+      setLoading(false);
+      return;
+    }
+    if (!Number.isFinite(limitCount) || limitCount <= 0) {
+      setData([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const q = query(
+      collection(firestore, 'dailySummary'),
+      where('userId', '==', userId),
+      orderBy('dateKey', 'desc'),
+      limit(limitCount),
+    );
+    try {
+      const unsub = onSnapshot(
+        q,
+        (snap) => {
+          setData(
+            snap.docs
+              .filter((d) => d.id !== '_schema')
+              .map((d) => ({ id: d.id, ...d.data() } as unknown as DailySummary)),
+          );
+          setLoading(false);
+        },
+        (err) => {
+          console.error('[firestore] history error:', err);
+          setLoading(false);
+        },
+      );
+      return unsub;
+    } catch (err) {
+      console.error('[firestore] history listen error:', err);
+      setLoading(false);
+      return;
+    }
+  }, [userId, limitCount]);
+
+  return { data, loading };
 }
 
 export { where, orderBy, limit };
