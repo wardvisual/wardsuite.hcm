@@ -1,33 +1,37 @@
 import { BaseEntity, UserRole } from './common.types';
 
+export interface Schedule {
+  start: string;        // HH:mm
+  end: string;          // HH:mm
+  breakMinutes: number; // default 60
+  graceMinutes: number; // default 5
+}
+
 export interface User extends BaseEntity {
+  uid: string;
+  employeeCode: string;
   email: string;
   name: string;
   role: UserRole;
-  timezone?: string;
-  schedule?: {
-    start: string; // HH:mm format (e.g., "09:00")
-    end: string;   // HH:mm format (e.g., "18:00")
-  };
+  timezone: string;
+  status: 'active' | 'inactive';
+  schedule: Schedule;
+  createdBy?: string;
 }
 
 export interface CreateUserDto {
   email: string;
   password: string;
   name: string;
-  role: UserRole;
+  role?: UserRole;
   timezone?: string;
-  schedule?: {
-    start: string;
-    end: string;
-  };
+  employeeCode?: string;
+  schedule?: Partial<Schedule>;
 }
 
 export interface UpdateUserDto {
   name?: string;
   timezone?: string;
-  schedule?: {
-    start: string;
-    end: string;
-  };
+  status?: 'active' | 'inactive';
+  schedule?: Partial<Schedule>;
 }
