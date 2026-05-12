@@ -37,7 +37,13 @@ export function useRealtimeDoc<T extends DocumentData>(path: string | null) {
           setLoading(false);
         },
       );
-      return unsub;
+      return () => {
+        try {
+          unsub();
+        } catch (err) {
+          console.error('[firestore] doc unsubscribe error:', path, err);
+        }
+      };
     } catch (err) {
       console.error('[firestore] doc listen error:', path, err);
       setLoading(false);
@@ -82,7 +88,13 @@ export function useTodayPunches(userId: string | null, dateKey: string) {
           setLoading(false);
         },
       );
-      return unsub;
+      return () => {
+        try {
+          unsub();
+        } catch (err) {
+          console.error('[firestore] today-punches unsubscribe error:', err);
+        }
+      };
     } catch (err) {
       console.error('[firestore] today-punches listen error:', err);
       setLoading(false);
@@ -118,7 +130,13 @@ export function useDailySummaryRealtime(userId: string | null, dateKey: string) 
           setLoading(false);
         },
       );
-      return unsub;
+      return () => {
+        try {
+          unsub();
+        } catch (err) {
+          console.error('[firestore] daily-summary unsubscribe error:', err);
+        }
+      };
     } catch (err) {
       console.error('[firestore] daily-summary listen error:', err);
       setLoading(false);
@@ -168,7 +186,13 @@ export function useHistoryRealtime(userId: string | null, limitCount = 30) {
           setLoading(false);
         },
       );
-      return unsub;
+      return () => {
+        try {
+          unsub();
+        } catch (err) {
+          console.error('[firestore] history unsubscribe error:', err);
+        }
+      };
     } catch (err) {
       console.error('[firestore] history listen error:', err);
       setLoading(false);
