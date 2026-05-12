@@ -9,6 +9,7 @@
     "start": "node -r tsconfig-paths/register dist/main.js",
     "migrate": "ts-node -r tsconfig-paths/register scripts/migrate.ts run",
     "migrate:status": "ts-node -r tsconfig-paths/register scripts/migrate.ts status",
+    "seed": "ts-node -r tsconfig-paths/register scripts/seed.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "keywords": [],
