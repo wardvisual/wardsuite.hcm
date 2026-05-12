@@ -1,22 +1,39 @@
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
+import { firebaseAuth } from '@web/lib/firebase';
 import { AuthComponent, LayoutComponent } from './components';
 import { LoginPage, RegisterPage } from '@web/modules/auth';
 import { AttendancePage } from '@web/modules/attendance';
 import { DashboardPage } from '@web/modules/dashboard';
-import { AdminReportsPage, AdminPunchesPage } from '@web/modules/admin';
 import { useAuthStore } from '@web/modules/auth/store/auth.store';
 
-function AdminGuard({ children }: { children: React.ReactNode }) {
-  const { user } = useAuthStore();
-  if (user && user.role !== 'ADMIN' && user.role !== 'MANAGER') {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return <>{children}</>;
+// Syncs Firebase auth state → Zustand store on every app boot.
+// Resolves the "logout on refresh" bug: Firebase Auth restores sessions
+// asynchronously, so we wait for the first onAuthStateChanged event before
+// letting AuthGuard make any routing decisions.
+function FirebaseAuthSync() {
+  const { clearAuth, setHydrating } = useAuthStore();
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
+      if (!firebaseUser) {
+        // Firebase says no session — clear any stale Zustand state
+        clearAuth();
+      }
+      // Either way, hydration is done
+      setHydrating(false);
+    });
+    return unsub;
+  }, [clearAuth, setHydrating]);
+
+  return null;
 }
 
 export default function App() {
   return (
     <Router>
+      <FirebaseAuthSync />
       <Routes>
         {/* Public */}
         <Route path="/auth/login" element={<LoginPage />} />
@@ -32,14 +49,6 @@ export default function App() {
                 <Routes>
                   <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/attendance" element={<AttendancePage />} />
-                  <Route
-                    path="/admin/reports"
-                    element={<AdminGuard><AdminReportsPage /></AdminGuard>}
-                  />
-                  <Route
-                    path="/admin/punches"
-                    element={<AdminGuard><AdminPunchesPage /></AdminGuard>}
-                  />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
               </LayoutComponent.Shell>
@@ -50,5 +59,3 @@ export default function App() {
     </Router>
   );
 }
-
-import React from 'react';

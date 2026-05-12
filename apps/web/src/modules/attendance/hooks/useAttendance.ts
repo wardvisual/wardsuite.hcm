@@ -3,33 +3,29 @@ import { useAuthStore } from '@web/modules/auth/store/auth.store';
 import { useTodayPunches, useDailySummaryRealtime } from '@web/lib/firestore';
 import { useAttendanceStore } from '../store/attendance.store';
 import { attendanceApi } from '../api/attendance.api';
-import { AttendancePunch, DailySummary } from '../types/attendance.types';
 
 function getTodayKey(timezone = 'Asia/Manila'): string {
-  return new Date()
-    .toLocaleDateString('sv-SE', { timeZone: timezone })
-    .slice(0, 10);
+  return new Date().toLocaleDateString('sv-SE', { timeZone: timezone }).slice(0, 10);
 }
 
 export function useAttendance() {
   const { user } = useAuthStore();
-  const { isPunching, error, setPunching, setError } = useAttendanceStore();
+  const {
+    todayPunches, todaySummary, isPunching, error,
+    setTodayPunches, setTodaySummary, setPunching, setError,
+  } = useAttendanceStore();
 
   const timezone = user?.timezone ?? 'Asia/Manila';
   const dateKey = getTodayKey(timezone);
 
-  // Real-time today's punches via Firestore listener
-  const { data: realtimePunches, loading: punchesLoading } = useTodayPunches<AttendancePunch>(
-    user?.id ?? null,
-    dateKey
-  );
+  // Firestore real-time → sync to Zustand store (background refresh)
+  const { data: realtimePunches, loading: punchesLoading } = useTodayPunches(user?.id ?? null, dateKey);
+  const { data: realtimeSummary, loading: summaryLoading } = useDailySummaryRealtime(user?.id ?? null, dateKey);
 
-  // Real-time daily summary via Firestore listener
-  const { data: realtimeSummary, loading: summaryLoading } =
-    useDailySummaryRealtime<DailySummary>(user?.id ?? null, dateKey);
+  useEffect(() => { setTodayPunches(realtimePunches); }, [realtimePunches, setTodayPunches]);
+  useEffect(() => { if (realtimeSummary) setTodaySummary(realtimeSummary); }, [realtimeSummary, setTodaySummary]);
 
-  // Derive current punch state from latest punch in real-time list
-  const latestPunch = realtimePunches.length > 0 ? realtimePunches[realtimePunches.length - 1] : null;
+  const latestPunch = todayPunches.length > 0 ? todayPunches[todayPunches.length - 1] : null;
   const isPunchedIn = latestPunch?.punchType === 'IN';
   const nextAction: 'IN' | 'OUT' = isPunchedIn ? 'OUT' : 'IN';
 
@@ -38,18 +34,25 @@ export function useAttendance() {
     setPunching(true);
     setError(null);
     try {
-      await attendanceApi.punch(timezone);
-      // State updates automatically via Firestore real-time listener
+      const newPunch = await attendanceApi.punch(timezone);
+      // Optimistic update: immediately reflect new punch in store before Firestore catches up
+      const current = useAttendanceStore.getState().todayPunches;
+      setTodayPunches([...current, newPunch]);
+      // Fetch updated daily summary from API
+      try {
+        const summary = await attendanceApi.getDailySummary(dateKey);
+        if (summary) setTodaySummary(summary);
+      } catch { /* Firestore real-time will eventually sync */ }
     } catch (err: any) {
       setError(err.message ?? 'Punch failed');
     } finally {
       setPunching(false);
     }
-  }, [user, timezone, setPunching, setError]);
+  }, [user, timezone, dateKey, setPunching, setError, setTodayPunches, setTodaySummary]);
 
   return {
-    todayPunches: realtimePunches,
-    todaySummary: realtimeSummary,
+    todayPunches,
+    todaySummary,
     isPunchedIn,
     nextAction,
     isPunching,

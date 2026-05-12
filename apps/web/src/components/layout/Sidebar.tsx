@@ -1,4 +1,3 @@
-import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -21,8 +20,8 @@ const employeeNav = [
 ];
 
 const adminNav = [
-  { icon: BarChart3, label: 'Reports', path: '/admin/reports' },
-  { icon: ClipboardEdit, label: 'Punch Mgmt', path: '/admin/punches' },
+  { icon: BarChart3, label: 'Reports', path: '/dashboard' },
+  { icon: ClipboardEdit, label: 'Punch Mgmt', path: '/dashboard' },
 ];
 
 interface SidebarProps {
