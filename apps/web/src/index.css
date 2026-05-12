@@ -79,23 +79,23 @@
   }
 
   .badge-success {
-    @apply badge bg-emerald-50 text-emerald-700 border border-emerald-100;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100;
   }
 
   .badge-warning {
-    @apply badge bg-amber-50 text-amber-700 border border-amber-100;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-100;
   }
 
   .badge-danger {
-    @apply badge bg-red-50 text-red-700 border border-red-100;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-100;
   }
 
   .badge-neutral {
-    @apply badge bg-[#f5f5f5] text-[#6b7280] border border-[#ebebeb];
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-[#f5f5f5] text-[#6b7280] border border-[#ebebeb];
   }
 
   .badge-info {
-    @apply badge bg-blue-50 text-blue-700 border border-blue-100;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100;
   }
 }
 
