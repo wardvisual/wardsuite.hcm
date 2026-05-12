@@ -16,7 +16,7 @@ export class UsersController {
 
   async findOne(req: Request, res: Response): Promise<void> {
     try {
-      const user = await this.service.findById(req.params.id);
+      const user = await this.service.findById(req.params.id as string);
       res.status(200).json(success(user));
     } catch (err: any) {
       res.status(err.statusCode ?? 500).json(error(err.message));
@@ -25,7 +25,7 @@ export class UsersController {
 
   async update(req: Request, res: Response): Promise<void> {
     try {
-      const user = await this.service.update(req.params.id, req.body);
+      const user = await this.service.update(req.params.id as string, req.body);
       res.status(200).json(success(user, 'User updated successfully'));
     } catch (err: any) {
       res.status(err.statusCode ?? 500).json(error(err.message));
@@ -34,7 +34,7 @@ export class UsersController {
 
   async delete(req: Request, res: Response): Promise<void> {
     try {
-      await this.service.delete(req.params.id);
+      await this.service.delete(req.params.id as string);
       res.status(200).json(success(null, 'User deleted successfully'));
     } catch (err: any) {
       res.status(err.statusCode ?? 500).json(error(err.message));

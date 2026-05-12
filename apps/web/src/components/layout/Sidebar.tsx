@@ -31,14 +31,12 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
-  const { token, user, clearAuth } = useAuthStore();
+  const { user, clearAuth } = useAuthStore();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   const handleLogout = async () => {
-    if (token) {
-      try { await authApi.logout(token); } catch { /* swallow */ }
-    }
+    try { await authApi.logout(); } catch { /* swallow */ }
     clearAuth();
     onClose?.();
     navigate('/auth/login');

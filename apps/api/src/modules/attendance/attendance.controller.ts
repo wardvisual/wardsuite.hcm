@@ -30,7 +30,7 @@ export class AttendanceController {
   getDailySummary = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.id;
-      const { dateKey } = req.params;
+      const dateKey = req.params.dateKey as string;
       const data = await this.service.getDailySummary(userId, dateKey);
       res.status(200).json(success(data));
     } catch (err: any) {
@@ -51,7 +51,7 @@ export class AttendanceController {
 
   getPunchHistory = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { punchId } = req.params;
+      const punchId = req.params.punchId as string;
       const data = await this.service.getAttendanceHistory(punchId);
       res.status(200).json(success(data));
     } catch (err: any) {
@@ -61,7 +61,7 @@ export class AttendanceController {
 
   adminEditPunch = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { punchId } = req.params;
+      const punchId = req.params.punchId as string;
       const adminId = resolveActor(req);
       const adminRole = req.user!.role;
       const data = await this.service.adminEditPunch(punchId, req.body, adminId, adminRole);
@@ -73,7 +73,7 @@ export class AttendanceController {
 
   adminDeletePunch = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { punchId } = req.params;
+      const punchId = req.params.punchId as string;
       const adminId = resolveActor(req);
       const adminRole = req.user!.role;
       await this.service.adminDeletePunch(punchId, req.body.reason ?? '', adminId, adminRole);

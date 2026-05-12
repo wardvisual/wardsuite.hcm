@@ -1,35 +1,37 @@
-import { env } from '@web/lib/env';
-import { getStoredToken } from '@web/modules/auth/store/auth.store';
+import axios, { AxiosError } from 'axios';
+import { firebaseAuth } from '@web/lib/firebase';
 
-interface RequestOptions {
-  method?: string;
-  body?: unknown;
-  headers?: Record<string, string>;
-}
+const http = axios.create({ baseURL: '/api' });
 
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const token = getStoredToken();
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+http.interceptors.request.use(async (config) => {
+  const user = firebaseAuth.currentUser;
+  if (user) {
+    const idToken = await user.getIdToken();
+    config.headers.Authorization = `Bearer ${idToken}`;
   }
+  return config;
+});
 
-  const res = await fetch(`${env.apiBaseUrl}${path}`, {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+http.interceptors.response.use(
+  (res) => res,
+  (err: AxiosError<{ message?: string }>) => {
+    const message = err.response?.data?.message ?? err.message ?? 'Request failed';
+    throw new Error(message);
+  },
+);
 
-  const json = await res.json();
+type ApiResponse<T> = { data: T };
 
-  if (!res.ok) {
-    throw new Error(json.message ?? `Request failed: ${res.status}`);
-  }
+export const apiRequest = {
+  get: <T>(path: string) =>
+    http.get<ApiResponse<T>>(path).then((r) => r.data.data),
 
-  return json.data as T;
-}
+  post: <T>(path: string, body?: unknown) =>
+    http.post<ApiResponse<T>>(path, body).then((r) => r.data.data),
+
+  patch: <T>(path: string, body?: unknown) =>
+    http.patch<ApiResponse<T>>(path, body).then((r) => r.data.data),
+
+  delete: <T>(path: string, body?: unknown) =>
+    http.delete<ApiResponse<T>>(path, { data: body }).then((r) => r.data.data),
+};

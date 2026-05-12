@@ -4,27 +4,20 @@ import { WeeklySummary } from '../types/admin.types';
 
 export const adminApi = {
   getDailyReport: (dateKey: string) =>
-    apiRequest<DailySummary[]>(`/attendance/admin/daily-report?dateKey=${dateKey}`),
+    apiRequest.get<DailySummary[]>(`/attendance/admin/daily-report?dateKey=${dateKey}`),
 
   getWeeklyReport: (weekKey: string) =>
-    apiRequest<WeeklySummary[]>(
-      `/attendance/admin/weekly-report?weekKey=${encodeURIComponent(weekKey)}`
-    ),
+    apiRequest.get<WeeklySummary[]>(`/attendance/admin/weekly-report?weekKey=${encodeURIComponent(weekKey)}`),
 
   editPunch: (punchId: string, timestamp: string, reason?: string) =>
-    apiRequest<{ id: string }>(`/attendance/punches/${punchId}`, {
-      method: 'PATCH',
-      body: { timestamp, reason },
-    }),
+    apiRequest.patch<{ id: string }>(`/attendance/punches/${punchId}`, { timestamp, reason }),
 
   deletePunch: (punchId: string, reason: string) =>
-    apiRequest<null>(`/attendance/punches/${punchId}`, {
-      method: 'DELETE',
-      body: { reason },
-    }),
+    apiRequest.delete<null>(`/attendance/punches/${punchId}`, { reason }),
 
-  getUsers: () => apiRequest<{ id: string; name: string; email: string; role: string; employeeCode: string; status: string; schedule: unknown }[]>('/users'),
+  getUsers: () =>
+    apiRequest.get<{ id: string; name: string; email: string; role: string; employeeCode: string; status: string; schedule: unknown }[]>('/users'),
 
   updateUser: (id: string, body: Record<string, unknown>) =>
-    apiRequest<unknown>(`/users/${id}`, { method: 'PATCH', body }),
+    apiRequest.patch<unknown>(`/users/${id}`, body),
 };

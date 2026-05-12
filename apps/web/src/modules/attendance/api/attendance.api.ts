@@ -3,35 +3,26 @@ import { AttendancePunch, DailySummary } from '../types/attendance.types';
 
 export const attendanceApi = {
   punch: (timezone?: string) =>
-    apiRequest<AttendancePunch>('/attendance/punch', {
-      method: 'POST',
-      body: { timezone, source: 'web' },
-    }),
+    apiRequest.post<AttendancePunch>('/attendance/punch', { timezone, source: 'web' }),
 
   getTodayPunches: (timezone = 'Asia/Manila') =>
-    apiRequest<AttendancePunch[]>(`/attendance/today?timezone=${encodeURIComponent(timezone)}`),
+    apiRequest.get<AttendancePunch[]>(`/attendance/today?timezone=${encodeURIComponent(timezone)}`),
 
   getDailySummary: (dateKey: string) =>
-    apiRequest<DailySummary | null>(`/attendance/daily-summary/${dateKey}`),
+    apiRequest.get<DailySummary | null>(`/attendance/daily-summary/${dateKey}`),
 
   getHistory: (limit = 30) =>
-    apiRequest<DailySummary[]>(`/attendance/history?limit=${limit}`),
+    apiRequest.get<DailySummary[]>(`/attendance/history?limit=${limit}`),
 
   adminEditPunch: (punchId: string, timestamp: string, reason?: string) =>
-    apiRequest<AttendancePunch>(`/attendance/punches/${punchId}`, {
-      method: 'PATCH',
-      body: { timestamp, reason },
-    }),
+    apiRequest.patch<AttendancePunch>(`/attendance/punches/${punchId}`, { timestamp, reason }),
 
   adminDeletePunch: (punchId: string, reason: string) =>
-    apiRequest<null>(`/attendance/punches/${punchId}`, {
-      method: 'DELETE',
-      body: { reason },
-    }),
+    apiRequest.delete<null>(`/attendance/punches/${punchId}`, { reason }),
 
   getAdminDailyReport: (dateKey: string) =>
-    apiRequest<DailySummary[]>(`/attendance/admin/daily-report?dateKey=${dateKey}`),
+    apiRequest.get<DailySummary[]>(`/attendance/admin/daily-report?dateKey=${dateKey}`),
 
   getAdminWeeklyReport: (weekKey: string) =>
-    apiRequest<DailySummary[]>(`/attendance/admin/weekly-report?weekKey=${encodeURIComponent(weekKey)}`),
+    apiRequest.get<DailySummary[]>(`/attendance/admin/weekly-report?weekKey=${encodeURIComponent(weekKey)}`),
 };

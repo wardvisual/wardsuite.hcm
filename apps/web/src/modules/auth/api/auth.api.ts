@@ -10,6 +10,8 @@ export interface RegisterPayload {
   email: string;
   name: string;
   firebaseUid: string;
+  timezone?: string;
+  schedule?: { start: string; end: string; breakMinutes?: number; graceMinutes?: number };
 }
 
 export interface LoginResult {
@@ -19,14 +21,14 @@ export interface LoginResult {
 
 export const authApi = {
   login: (payload: LoginPayload) =>
-    apiRequest<LoginResult>('/auth/login', { method: 'POST', body: payload }),
+    apiRequest.post<LoginResult>('/auth/login', payload),
 
   register: (payload: RegisterPayload) =>
-    apiRequest<{ user: AuthUser }>('/auth/register', { method: 'POST', body: payload }),
+    apiRequest.post<{ user: AuthUser }>('/auth/register', payload),
 
   logout: () =>
-    apiRequest<null>('/auth/logout', { method: 'POST' }),
+    apiRequest.post<null>('/auth/logout'),
 
   me: () =>
-    apiRequest<AuthUser>('/auth/me'),
+    apiRequest.get<AuthUser>('/auth/me'),
 };

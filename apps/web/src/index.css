@@ -19,24 +19,83 @@
 }
 
 @layer components {
+  /* Cards */
   .floating-card {
-    @apply bg-white border border-[#f8f8f8] rounded-[32px] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.04)] hover:shadow-[0_40px_80px_-15px_rgba(0,0,0,0.06)] transition-all duration-500 ease-in-out;
+    @apply bg-white border border-[#f0f0f0] rounded-[28px] shadow-[0_8px_40px_-8px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_60px_-12px_rgba(0,0,0,0.09)] transition-all duration-500 ease-in-out;
   }
-  
+
   .glass-card {
     @apply bg-white border border-[#f1f1f1] rounded-2xl shadow-[var(--shadow-card)];
   }
-  
+
+  /* Inputs */
   .input-theme {
     @apply w-full px-4 py-3 bg-[#f9fafb] border border-[#e5e7eb] rounded-xl text-sm focus:outline-none focus:border-[#111111] transition-all duration-200;
   }
 
+  /* Buttons */
   .btn-primary {
-    @apply px-6 py-3 bg-[#111111] text-white rounded-full text-sm font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2;
+    @apply px-6 py-3 bg-[#111111] text-white rounded-full text-sm font-semibold hover:opacity-90 active:scale-95 transition-all duration-150 flex items-center justify-center gap-2;
   }
 
   .btn-secondary {
-    @apply px-6 py-3 bg-white border border-[#e5e7eb] text-[#111111] rounded-full text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2;
+    @apply px-6 py-3 bg-white border border-[#e5e7eb] text-[#111111] rounded-full text-sm font-semibold hover:bg-[#f9fafb] active:scale-95 transition-all duration-150 flex items-center justify-center gap-2;
+  }
+
+  .btn-danger {
+    @apply px-6 py-3 bg-red-500 text-white rounded-full text-sm font-semibold hover:bg-red-600 active:scale-95 transition-all duration-150 flex items-center justify-center gap-2;
+  }
+
+  /* Page layout */
+  .page-container {
+    @apply space-y-6 max-w-screen-xl;
+  }
+
+  .page-header {
+    @apply mb-6;
+  }
+
+  .page-title {
+    @apply text-2xl font-black text-[#111111] tracking-tight;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-[#6b7280] mt-0.5;
+  }
+
+  /* Section label */
+  .section-label {
+    @apply text-[10px] font-black text-[#bbbbbb] uppercase tracking-[0.25em];
+  }
+
+  /* Divider */
+  .divider {
+    @apply h-px bg-[#f1f1f1] my-4;
+  }
+
+  /* Status badges */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold;
+  }
+
+  .badge-success {
+    @apply badge bg-emerald-50 text-emerald-700 border border-emerald-100;
+  }
+
+  .badge-warning {
+    @apply badge bg-amber-50 text-amber-700 border border-amber-100;
+  }
+
+  .badge-danger {
+    @apply badge bg-red-50 text-red-700 border border-red-100;
+  }
+
+  .badge-neutral {
+    @apply badge bg-[#f5f5f5] text-[#6b7280] border border-[#ebebeb];
+  }
+
+  .badge-info {
+    @apply badge bg-blue-50 text-blue-700 border border-blue-100;
   }
 }
 
@@ -44,4 +103,3 @@
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
-

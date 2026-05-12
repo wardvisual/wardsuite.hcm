@@ -6,7 +6,7 @@ export class UsersService {
 
   async findAll(): Promise<User[]> {
     const snap = await this.db.collection('users')
-      .where('id', '!=', '__schema__')
+      .where('id', '!=', '_schema')
       .get();
     return snap.docs.map((d) => d.data() as User);
   }
@@ -28,7 +28,7 @@ export class UsersService {
     }
 
     const updates: Partial<User> = {
-      ...dto,
+      ...(dto as Partial<User>),
       updatedAt: new Date().toISOString(),
     };
 

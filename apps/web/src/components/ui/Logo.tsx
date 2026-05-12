@@ -1,10 +1,19 @@
-export const Logo = () => {
-    return (
-        <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#ff7e5f] to-[#feb47b] flex items-center justify-center">
-                <span className="text-white font-bold text-sm">O</span>
-            </div>
-            <span className="text-xl font-bold text-[#111111]">OrgManager</span>
-        </div>
-    );
+interface LogoProps {
+  size?: 'sm' | 'md' | 'lg';
+}
+
+export function Logo({ size = 'md' }: LogoProps) {
+  const iconSize = size === 'sm' ? 'w-8 h-8' : size === 'lg' ? 'w-12 h-12' : 'w-10 h-10';
+  const textSize = size === 'sm' ? 'text-lg' : size === 'lg' ? 'text-2xl' : 'text-xl';
+
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className={`${iconSize} rounded-2xl bg-[#111111] flex items-center justify-center shrink-0`}>
+        <span className="text-white font-black text-sm">W</span>
+      </div>
+      <span className={`${textSize} font-black text-[#111111] tracking-tight`}>
+        WardSuite
+      </span>
+    </div>
+  );
 }

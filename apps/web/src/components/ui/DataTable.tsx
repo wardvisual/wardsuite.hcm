@@ -14,13 +14,22 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { cn } from '@web/lib/utils';
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+// Simple column definition used throughout the app
+export interface Column<T> {
+  key: string;
+  header: string;
+  cell: (row: T) => React.ReactNode;
+}
+
+export interface DataTableProps<TData, _TValue = unknown> {
+  columns: Column<TData>[];
   data: TData[];
   onRowClick?: (row: TData) => void;
-  searchKey?: string;
-  searchTerm?: string;
+  keyExtractor?: (row: TData) => string | number;
   showSearch?: boolean;
+  searchTerm?: string;
+  isLoading?: boolean;
+  emptyMessage?: string;
 }
 
 function buildPageNumbers(current: number, total: number): (number | '...')[] {
@@ -54,13 +63,15 @@ export function StatusBadge({ label, variant }: StatusBadgeProps) {
   );
 }
 
-export function DataTable<TData, TValue>({
+export function DataTable<TData>({
   columns,
   data,
   onRowClick,
-  searchTerm,
   showSearch = false,
-}: DataTableProps<TData, TValue>) {
+  searchTerm,
+  isLoading = false,
+  emptyMessage = 'No results found.',
+}: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = React.useState('');
   const [pagination, setPagination] = React.useState<PaginationState>({
@@ -75,6 +86,17 @@ export function DataTable<TData, TValue>({
     }
   }, [searchTerm]);
 
+  // Convert simple Column<T>[] to tanstack ColumnDef<T>[]
+  const tanstackColumns = React.useMemo<ColumnDef<TData>[]>(
+    () =>
+      columns.map((col) => ({
+        id: col.key,
+        header: col.header,
+        cell: ({ row }) => col.cell(row.original),
+      })),
+    [columns],
+  );
+
   const handleFilterChange = (value: string) => {
     setGlobalFilter(value);
     setPagination(p => ({ ...p, pageIndex: 0 }));
@@ -82,7 +104,7 @@ export function DataTable<TData, TValue>({
 
   const table = useReactTable({
     data,
-    columns,
+    columns: tanstackColumns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -115,16 +137,16 @@ export function DataTable<TData, TValue>({
         </div>
       )}
 
-      <div className="border-[#f8f8f8] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.03)] border rounded-[32px] overflow-hidden">
+      <div className="border-[#f0f0f0] bg-white shadow-[0_4px_24px_rgba(0,0,0,0.04)] border rounded-[24px] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="border-collapse w-full text-left">
-            <thead className="border-[#f1f1f1] bg-gray-50/50 border-b">
+            <thead className="border-[#f1f1f1] bg-[#fafafa] border-b">
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => (
                     <th
                       key={header.id}
-                      className="px-6 py-4 font-bold text-[#6b7280] text-[11px] uppercase tracking-wider"
+                      className="px-6 py-4 font-black text-[#aaaaaa] text-[10px] uppercase tracking-[0.2em]"
                     >
                       {header.isPlaceholder
                         ? null
@@ -134,36 +156,47 @@ export function DataTable<TData, TValue>({
                 </tr>
               ))}
             </thead>
-            <tbody className="divide-y divide-[#f1f1f1]">
-              <AnimatePresence mode="popLayout">
-                {table.getRowModel().rows.map((row, index) => (
-                  <motion.tr
-                    key={row.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.2, delay: index * 0.03 }}
-                    onClick={() => onRowClick?.(row.original)}
-                    className={cn(
-                      'group transition-colors hover:bg-[#f9fafb]',
-                      onRowClick && 'cursor-pointer'
-                    )}
-                  >
-                    {row.getVisibleCells().map(cell => (
-                      <td key={cell.id} className="px-6 py-4 text-[14px]">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </motion.tr>
-                ))}
-              </AnimatePresence>
-              {table.getRowModel().rows.length === 0 && (
+            <tbody className="divide-y divide-[#f5f5f5]">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={columns.length} className="px-6 py-12 text-center">
+                    <div className="flex items-center justify-center gap-3 text-[#aaaaaa] text-sm">
+                      <div className="w-4 h-4 border-2 border-[#dddddd] border-t-[#111111] rounded-full animate-spin" />
+                      Loading…
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                <AnimatePresence mode="popLayout">
+                  {table.getRowModel().rows.map((row, index) => (
+                    <motion.tr
+                      key={row.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      transition={{ duration: 0.2, delay: index * 0.025 }}
+                      onClick={() => onRowClick?.(row.original)}
+                      className={cn(
+                        'group transition-colors hover:bg-[#fafafa]',
+                        onRowClick && 'cursor-pointer'
+                      )}
+                    >
+                      {row.getVisibleCells().map(cell => (
+                        <td key={cell.id} className="px-6 py-3.5 text-sm">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+              )}
+              {!isLoading && table.getRowModel().rows.length === 0 && (
                 <tr>
                   <td
                     colSpan={columns.length}
-                    className="px-6 py-16 text-[#6b7280] text-center text-sm"
+                    className="px-6 py-16 text-[#aaaaaa] text-center text-sm"
                   >
-                    No results found.
+                    {emptyMessage}
                   </td>
                 </tr>
               )}
@@ -172,12 +205,12 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
-      <div className="flex sm:flex-row flex-col justify-between items-start sm:items-center gap-4 px-2">
+      <div className="flex sm:flex-row flex-col justify-between items-start sm:items-center gap-4 px-1">
         <div className="flex items-center gap-3 text-[#6b7280] text-sm">
           <span className="font-medium text-[12px]">
             {totalFiltered === 0
               ? 'No results'
-              : `Showing ${startRow}–${endRow} of ${totalFiltered} result${totalFiltered !== 1 ? 's' : ''}`}
+              : `Showing ${startRow}–${endRow} of ${totalFiltered}`}
           </span>
           <select
             className="border-[#f1f1f1] hover:border-[#e0e0e0] bg-white px-3 py-1.5 border rounded-xl font-bold text-[#111111] text-[11px] transition-colors cursor-pointer outline-none"
@@ -194,49 +227,47 @@ export function DataTable<TData, TValue>({
           </select>
         </div>
 
-        {(
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              title="Previous page"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="border-[#f1f1f1] hover:bg-gray-50 disabled:opacity-40 p-2 border rounded-xl transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" aria-hidden="true" />
-            </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            title="Previous page"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+            className="border-[#f1f1f1] hover:bg-gray-50 disabled:opacity-40 p-2 border rounded-xl transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" aria-hidden="true" />
+          </button>
 
-            {pageNums.map((p, i) =>
-              p === '...' ? (
-                <span key={`ellipsis-${i}`} className="px-1 text-[#bbbbbb] text-sm select-none">…</span>
-              ) : (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => table.setPageIndex(p as number)}
-                  className={cn(
-                    'w-9 h-9 rounded-xl text-sm font-bold transition-all',
-                    p === pageIndex
-                      ? 'bg-black text-white shadow-sm'
-                      : 'border border-[#f1f1f1] text-[#6b7280] hover:bg-gray-50 hover:border-[#e0e0e0]'
-                  )}
-                >
-                  {(p as number) + 1}
-                </button>
-              )
-            )}
+          {pageNums.map((p, i) =>
+            p === '...' ? (
+              <span key={`ellipsis-${i}`} className="px-1 text-[#bbbbbb] text-sm select-none">…</span>
+            ) : (
+              <button
+                key={p}
+                type="button"
+                onClick={() => table.setPageIndex(p as number)}
+                className={cn(
+                  'w-9 h-9 rounded-xl text-sm font-bold transition-all',
+                  p === pageIndex
+                    ? 'bg-black text-white shadow-sm'
+                    : 'border border-[#f1f1f1] text-[#6b7280] hover:bg-gray-50 hover:border-[#e0e0e0]'
+                )}
+              >
+                {(p as number) + 1}
+              </button>
+            )
+          )}
 
-            <button
-              type="button"
-              title="Next page"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="border-[#f1f1f1] hover:bg-gray-50 disabled:opacity-40 p-2 border rounded-xl transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" aria-hidden="true" />
-            </button>
-          </div>
-        )}
+          <button
+            type="button"
+            title="Next page"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+            className="border-[#f1f1f1] hover:bg-gray-50 disabled:opacity-40 p-2 border rounded-xl transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </div>
   );

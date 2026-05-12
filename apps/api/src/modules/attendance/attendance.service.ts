@@ -104,7 +104,7 @@ export class AttendanceService {
       .get();
 
     return snap.docs
-      .filter((d) => d.id !== '__schema__')
+      .filter((d) => d.id !== '_schema')
       .map((d) => ({ id: d.id, ...d.data() }) as AttendancePunch);
   }
 
@@ -124,7 +124,7 @@ export class AttendanceService {
       .get();
 
     return snap.docs
-      .filter((d) => d.id !== '__schema__')
+      .filter((d) => d.id !== '_schema')
       .map((d) => ({ id: d.id, ...d.data() }) as DailySummary);
   }
 
@@ -136,7 +136,7 @@ export class AttendanceService {
       .get();
 
     return snap.docs
-      .filter((d) => d.id !== '__schema__')
+      .filter((d) => d.id !== '_schema')
       .map((d) => ({ id: d.id, ...d.data() }) as AttendanceHistory);
   }
 
@@ -242,7 +242,7 @@ export class AttendanceService {
       .get();
 
     return snap.docs
-      .filter((d) => d.id !== '__schema__')
+      .filter((d) => d.id !== '_schema')
       .map((d) => ({ id: d.id, ...d.data() }) as DailySummary);
   }
 
@@ -255,7 +255,7 @@ export class AttendanceService {
 
     const byUser = new Map<string, DailySummary[]>();
     snap.docs
-      .filter((d) => d.id !== '__schema__')
+      .filter((d) => d.id !== '_schema')
       .forEach((d) => {
         const s = { id: d.id, ...d.data() } as DailySummary;
         if (!byUser.has(s.userId)) byUser.set(s.userId, []);
@@ -375,7 +375,7 @@ export class AttendanceService {
     return (eh * 60 + em) - (sh * 60 + sm) - schedule.breakMinutes;
   }
 
-  private async writeHistory(data: Omit<AttendanceHistory, 'id'>): Promise<void> {
+  private async writeHistory(data: Omit<AttendanceHistory, 'id' | 'changedAt'>): Promise<void> {
     await this.db.collection('attendanceHistory').add({
       ...data,
       changedAt: new Date().toISOString(),
