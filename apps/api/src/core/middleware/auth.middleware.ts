@@ -1,52 +1,48 @@
+import * as admin from 'firebase-admin';
 import { Request, Response, NextFunction } from 'express';
 import { error } from '@api/core/utils/response.utils';
 
-/**
- * Extended Express Request with authenticated user
- */
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
     email: string;
     role: string;
+    employeeCode?: string;
   };
 }
 
-/**
- * Middleware to require authentication
- * Validates Bearer token and attaches user to request
- */
-export function requireAuth(
+export async function requireAuth(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json(error('Unauthorized - No token provided', 401));
+    if (!authHeader?.startsWith('Bearer ')) {
+      res.status(401).json(error('Unauthorized — no token provided', 401));
       return;
     }
 
-    // TODO: Replace with Firebase Admin SDK token verification:
-    // const decodedToken = await admin.auth().verifyIdToken(authHeader.substring(7));
+    const token = authHeader.substring(7);
+    const decoded = await admin.auth().verifyIdToken(token);
+
+    const userDoc = await admin.firestore().collection('users').doc(decoded.uid).get();
+    const userData = userDoc.data();
 
     req.user = {
-      id: 'dev-user-id',
-      email: 'dev@example.com',
-      role: 'ADMIN',
+      id: decoded.uid,
+      email: decoded.email ?? '',
+      role: userData?.role ?? 'STAFF',
+      employeeCode: userData?.employeeCode,
     };
 
     next();
-  } catch (err) {
-    res.status(401).json(error('Unauthorized - Invalid token', 401));
+  } catch {
+    res.status(401).json(error('Unauthorized — invalid or expired token', 401));
   }
 }
 
-/**
- * Middleware to require specific role
- */
 export function requireRole(...roles: string[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
@@ -55,7 +51,7 @@ export function requireRole(...roles: string[]) {
     }
 
     if (!roles.includes(req.user.role)) {
-      res.status(403).json(error('Forbidden - Insufficient permissions', 403));
+      res.status(403).json(error('Forbidden — insufficient permissions', 403));
       return;
     }
 
@@ -63,9 +59,6 @@ export function requireRole(...roles: string[]) {
   };
 }
 
-/**
- * Get actor ID from request (for audit logging)
- */
 export function resolveActor(req: AuthenticatedRequest): string {
-  return req.user?.id || 'system';
+  return req.user?.id ?? 'system';
 }

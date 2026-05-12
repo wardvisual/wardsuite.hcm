@@ -8,50 +8,83 @@ export class AuthService {
   private auth = admin.auth();
 
   async register(dto: RegisterDto): Promise<{ user: User }> {
-    const firebaseUser = await this.auth.createUser({
-      email: dto.email,
-      password: dto.password,
-      displayName: dto.name,
-    });
+    let uid: string;
+
+    if (dto.firebaseUid) {
+      // Client already created the Firebase Auth user — just create the Firestore profile
+      uid = dto.firebaseUid;
+    } else if (dto.password) {
+      const firebaseUser = await this.auth.createUser({
+        email: dto.email,
+        password: dto.password,
+        displayName: dto.name,
+      });
+      uid = firebaseUser.uid;
+    } else {
+      throw Object.assign(new Error('Either firebaseUid or password is required'), { statusCode: 400 });
+    }
+
+    // Auto-generate employee code based on user count
+    const existingSnap = await this.db.collection('users').count().get();
+    const count = existingSnap.data().count + 1;
+    const employeeCode = `EMP-${String(count).padStart(4, '0')}`;
 
     const now = new Date().toISOString();
     const user: User = {
-      id: firebaseUser.uid,
+      id: uid,
+      uid,
+      employeeCode,
       email: dto.email,
       name: dto.name,
       role: dto.role ?? 'STAFF',
       timezone: dto.timezone ?? 'Asia/Manila',
-      schedule: dto.schedule ?? { start: '09:00', end: '18:00' },
+      status: 'active',
+      schedule: {
+        start: dto.schedule?.start ?? '09:00',
+        end: dto.schedule?.end ?? '18:00',
+        breakMinutes: dto.schedule?.breakMinutes ?? 60,
+        graceMinutes: dto.schedule?.graceMinutes ?? 5,
+      },
       createdAt: now,
       updatedAt: now,
+      createdBy: uid,
     };
 
-    await this.db.collection('users').doc(firebaseUser.uid).set(user);
+    await this.db.collection('users').doc(uid).set(user);
 
     return { user };
   }
 
   async login(dto: LoginDto): Promise<LoginResult> {
-    // Firebase Admin SDK does not expose email/password sign-in.
-    // The client (web) authenticates with Firebase Auth SDK and sends the ID token.
-    // This endpoint accepts a pre-authenticated Firebase ID token, not a raw password.
-    // The LoginDto.password field here holds the Firebase ID token from the client.
+    // dto.password holds the Firebase ID token from the client-side Firebase Auth SDK
     const decodedToken = await this.auth.verifyIdToken(dto.password);
 
     const userDoc = await this.db.collection('users').doc(decodedToken.uid).get();
 
     if (!userDoc.exists) {
-      throw Object.assign(new Error('User not found'), { statusCode: 404 });
+      throw Object.assign(new Error('User profile not found. Please contact your administrator.'), { statusCode: 404 });
     }
 
     const user = userDoc.data() as User;
 
-    // Mint a custom token so the client can persist session state
     const token = await this.auth.createCustomToken(decodedToken.uid, {
       role: user.role,
     });
 
-    return { token, user };
+    return {
+      token,
+      user: {
+        id: user.id,
+        uid: user.uid,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        employeeCode: user.employeeCode,
+        timezone: user.timezone,
+        status: user.status,
+        schedule: user.schedule,
+      },
+    };
   }
 
   async getMe(uid: string): Promise<User> {
