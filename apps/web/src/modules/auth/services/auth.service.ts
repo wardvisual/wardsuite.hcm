@@ -16,7 +16,6 @@ export class AuthService {
       values.email,
       values.password,
     );
-    // Exchange Firebase ID token for our API session
     const idToken = await credential.user.getIdToken();
     const result = await authApi.login({ email: values.email, password: idToken });
     return result;
@@ -32,6 +31,16 @@ export class AuthService {
       email: values.email,
       name: values.name,
       firebaseUid: credential.user.uid,
+      timezone: values.timezone,
+      schedule:
+        values.scheduleStart && values.scheduleEnd
+          ? {
+              start: values.scheduleStart,
+              end: values.scheduleEnd,
+              breakMinutes: 60,
+              graceMinutes: 5,
+            }
+          : undefined,
     });
     return result;
   }

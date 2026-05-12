@@ -2,13 +2,18 @@ export type UserRole = 'ADMIN' | 'MANAGER' | 'STAFF';
 
 export interface AuthUser {
   id: string;
+  uid: string;
   email: string;
   name: string;
   role: UserRole;
-  timezone?: string;
-  schedule?: {
+  employeeCode: string;
+  timezone: string;
+  status: 'active' | 'inactive';
+  schedule: {
     start: string;
     end: string;
+    breakMinutes: number;
+    graceMinutes: number;
   };
   createdAt: string;
   updatedAt: string;
@@ -20,8 +25,11 @@ export interface LoginFormValues {
 }
 
 export interface RegisterFormValues {
+  name: string;
   email: string;
   password: string;
   confirmPassword: string;
-  name: string;
+  timezone?: string;
+  scheduleStart?: string;
+  scheduleEnd?: string;
 }
