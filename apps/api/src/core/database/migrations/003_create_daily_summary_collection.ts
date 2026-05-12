@@ -4,7 +4,7 @@ export const migration003: Migration = {
   version: '003',
   description: 'Create dailySummary collection with full metrics schema seed',
   async up(db) {
-    await db.collection('dailySummary').doc('__schema__').set({
+    await db.collection('dailySummary').doc('_schema').set({
       _schemaVersion: 2,
       _description: 'Pre-computed daily totals — doc ID: {uid}_{YYYY-MM-DD}',
       _shape: {

@@ -4,7 +4,7 @@ export const migration002: Migration = {
   version: '002',
   description: 'Create attendance collection with full punch schema seed',
   async up(db) {
-    await db.collection('attendance').doc('__schema__').set({
+    await db.collection('attendance').doc('_schema').set({
       _schemaVersion: 2,
       _description: 'Attendance punch event — one doc per IN or OUT event',
       _shape: {

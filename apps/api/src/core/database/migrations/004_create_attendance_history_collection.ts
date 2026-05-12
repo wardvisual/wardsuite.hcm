@@ -4,7 +4,7 @@ export const migration004: Migration = {
   version: '004',
   description: 'Create attendanceHistory collection — immutable audit log for punch edits',
   async up(db) {
-    await db.collection('attendanceHistory').doc('__schema__').set({
+    await db.collection('attendanceHistory').doc('_schema').set({
       _schemaVersion: 1,
       _description: 'Immutable audit trail — one doc per change event on an attendance punch',
       _shape: {

@@ -4,7 +4,7 @@ export const migration001: Migration = {
   version: '001',
   description: 'Create users collection with full HCM schema seed',
   async up(db) {
-    await db.collection('users').doc('__schema__').set({
+    await db.collection('users').doc('_schema').set({
       _schemaVersion: 2,
       _description: 'User document shape',
       _shape: {
