@@ -12,7 +12,8 @@ export function useAttendance() {
   const { user } = useAuthStore();
   const {
     todayPunches, todaySummary, isPunching, error,
-    setTodayPunches, setTodaySummary, setPunching, setError,
+    setTodayPunches, setTodaySummary, upsertHistorySummary,
+    setPunching, setError,
   } = useAttendanceStore();
 
   const timezone = user?.timezone ?? 'Asia/Manila';
@@ -23,7 +24,11 @@ export function useAttendance() {
   const { data: realtimeSummary, loading: summaryLoading } = useDailySummaryRealtime(user?.id ?? null, dateKey);
 
   useEffect(() => { setTodayPunches(realtimePunches); }, [realtimePunches, setTodayPunches]);
-  useEffect(() => { if (realtimeSummary) setTodaySummary(realtimeSummary); }, [realtimeSummary, setTodaySummary]);
+  useEffect(() => {
+    if (!realtimeSummary) return;
+    setTodaySummary(realtimeSummary);
+    upsertHistorySummary(realtimeSummary);
+  }, [realtimeSummary, setTodaySummary, upsertHistorySummary]);
 
   const latestPunch = todayPunches.length > 0 ? todayPunches[todayPunches.length - 1] : null;
   const isPunchedIn = latestPunch?.punchType === 'IN';
@@ -41,14 +46,26 @@ export function useAttendance() {
       // Fetch updated daily summary from API
       try {
         const summary = await attendanceApi.getDailySummary(dateKey);
-        if (summary) setTodaySummary(summary);
+        if (summary) {
+          setTodaySummary(summary);
+          upsertHistorySummary(summary);
+        }
       } catch { /* Firestore real-time will eventually sync */ }
     } catch (err: any) {
       setError(err.message ?? 'Punch failed');
     } finally {
       setPunching(false);
     }
-  }, [user, timezone, dateKey, setPunching, setError, setTodayPunches, setTodaySummary]);
+  }, [
+    user,
+    timezone,
+    dateKey,
+    setPunching,
+    setError,
+    setTodayPunches,
+    setTodaySummary,
+    upsertHistorySummary,
+  ]);
 
   return {
     todayPunches,

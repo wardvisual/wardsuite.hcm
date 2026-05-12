@@ -29,7 +29,6 @@ const columns: Column<DailySummary>[] = [
   { key: 'date', header: 'Date', cell: (r) => <span className="font-bold text-[#111111]">{fmtDate(r.dateKey)}</span> },
   { key: 'in', header: 'In', cell: (r) => <span className="text-emerald-700 font-bold">{fmtTime(r.firstIn)}</span> },
   { key: 'out', header: 'Out', cell: (r) => <span className="text-[#6b7280]">{fmtTime(r.lastOut)}</span> },
-  { key: 'worked', header: 'Worked', cell: (r) => <span className="font-bold tabular-nums">{fmtH(r.workedMinutes)}</span> },
   { key: 'regular', header: 'Regular', cell: (r) => <span className="tabular-nums">{fmtH(r.regularMinutes)}</span> },
   {
     key: 'ot', header: 'OT',
