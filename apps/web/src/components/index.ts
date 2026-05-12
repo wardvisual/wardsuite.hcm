@@ -1,11 +1,14 @@
-// ----------------- Auth ----------------- 
+// ── Auth ─────────────────────────────────────────────────────────────────────
 export * as AuthComponent from './auth/AuthGuard';
 
-
-// ----------------- Layout ----------------- 
+// ── Layout ───────────────────────────────────────────────────────────────────
 import { Shell } from './layout/Shell';
 import { Sidebar } from './layout/Sidebar';
 export const LayoutComponent = { Shell, Sidebar };
 
-
-// ----------------- UI ----------------- 
+// ── UI ───────────────────────────────────────────────────────────────────────
+export { DataTable, StatusBadge } from './ui/DataTable';
+export type { Column } from './ui/DataTable';
+export { Modal } from './ui/Modal';
+export { PublicImage } from './ui/PublicImage';
+export { Logo } from './ui/Logo';
