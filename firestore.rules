@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getUserRole() {
+      return getUserData().role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'ADMIN';
+    }
+
+    function isAdminOrManager() {
+      return isAuthenticated() && getUserRole() in ['ADMIN', 'MANAGER'];
+    }
+
+    // ── users ────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdminOrManager());
+      allow create: if isAdmin();
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // ── attendance ───────────────────────────────────────────────────────────
+    match /attendance/{attendanceId} {
+      // Allow employee to read their own punches; admin/manager sees all
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdminOrManager());
+      // Employees create their own punches via API; admin can also create
+      allow create: if isAuthenticated() && (isOwner(request.resource.data.userId) || isAdmin());
+      // Only admin/manager can edit punches (corrections)
+      allow update: if isAdminOrManager();
+      allow delete: if isAdmin();
+    }
+
+    // ── dailySummary ─────────────────────────────────────────────────────────
+    match /dailySummary/{summaryId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdminOrManager());
+      // Backend (Admin SDK) owns writes — deny direct client writes
+      allow write: if false;
+    }
+
+    // ── attendanceHistory ────────────────────────────────────────────────────
+    match /attendanceHistory/{historyId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdminOrManager());
+      allow write: if false;
+    }
+
+    // ── weeklySummary ────────────────────────────────────────────────────────
+    match /weeklySummary/{summaryId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdminOrManager());
+      allow write: if false;
+    }
+
+    // ── _migrations ──────────────────────────────────────────────────────────
+    match /_migrations/{version} {
+      allow read, write: if false;
+    }
+  }
+}
