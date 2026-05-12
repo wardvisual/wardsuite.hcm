@@ -103,7 +103,7 @@ export default function AttendancePage() {
       </div>
 
       {/* Punch button card */}
-      <div className="glass-card p-8 flex flex-col items-center gap-6">
+      <div className="floating-card p-8 sm:p-12 flex flex-col items-center gap-6">
         {/* Live clock */}
         <LiveClock />
 
@@ -172,7 +172,7 @@ export default function AttendancePage() {
       )}
 
       {/* Timeline */}
-      <div className="glass-card p-6">
+      <div className="floating-card p-6">
         <h2 className="text-base font-black text-[#111111] mb-4">Today's Timeline</h2>
         <PunchTimeline punches={todayPunches} />
       </div>
