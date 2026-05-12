@@ -7,19 +7,22 @@
     "module": "ESNext",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
+
     "moduleResolution": "bundler",
+
     "isolatedModules": true,
     "moduleDetection": "force",
     "allowJs": true,
     "jsx": "react-jsx",
     "allowImportingTsExtensions": true,
     "noEmit": true,
+
     "types": ["vite/client"],
+
     "paths": {
-      "@/src/*": ["./apps/web/src/*"],
-      "@/*": ["./apps/web/*"],
-      "@server/*": ["./apps/api/src/*"],
-      "@api/*": ["./apps/api/src/*"]
+      "@web/*": ["apps/web/src/*"],
+      "@api/*": ["apps/api/src/*"],
+      "@hcm/shared/*": ["libs/shared/*"]
     }
   }
 }
