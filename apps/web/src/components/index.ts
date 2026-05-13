@@ -10,5 +10,6 @@ export const LayoutComponent = { Shell, Sidebar };
 export { DataTable, StatusBadge } from './ui/DataTable';
 export type { Column } from './ui/DataTable';
 export { Modal } from './ui/Modal';
+export { Drawer } from './ui/Modals';
 export { PublicImage } from './ui/PublicImage';
 export { Logo } from './ui/Logo';

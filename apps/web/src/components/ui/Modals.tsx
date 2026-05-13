@@ -7,11 +7,13 @@ interface DrawerProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  description?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  className?: string;
 }
 
-export function Drawer({ isOpen, onClose, title, children, footer }: DrawerProps) {
+export function Drawer({ isOpen, onClose, title, description, children, footer, className }: DrawerProps) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -21,31 +23,37 @@ export function Drawer({ isOpen, onClose, title, children, footer }: DrawerProps
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[999]"
+            className="fixed inset-0 z-[2000] bg-black/30 backdrop-blur-sm"
           />
           <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl z-[1000] flex flex-col"
+            initial={{ opacity: 0, x: 48 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 48 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className={cn(
+              'fixed inset-y-0 right-0 z-[2001] flex h-dvh w-full max-w-full flex-col border-l border-white/60 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.18)] backdrop-blur-xl sm:max-w-md lg:max-w-lg',
+              className,
+            )}
           >
-            <div className="flex items-center justify-between p-6 border-b border-[#f1f1f1]">
-              <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+            <div className="flex items-start justify-between gap-4 border-b border-[#f1f1f1] px-5 py-4 sm:px-6">
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-black tracking-tight text-[#111111] sm:text-xl">{title}</h2>
+                {description && <p className="mt-1 text-sm text-[#6b7280]">{description}</p>}
+              </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="shrink-0 rounded-xl p-2 text-[#6b7280] transition-colors hover:bg-[#f5f5f5] hover:text-[#111111]"
               >
-                <X className="w-5 h-5 text-[#6b7280]" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-6">
               {children}
             </div>
 
             {footer && (
-              <div className="p-6 border-t border-[#f1f1f1] bg-gray-50/50">
+              <div className="border-t border-[#f1f1f1] bg-[#fafafa] px-5 py-4 sm:px-6">
                 {footer}
               </div>
             )}
@@ -84,9 +92,9 @@ export function ConfirmDialog({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[1010]"
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[2000]"
           />
-          <div className="fixed inset-0 flex items-center justify-center p-4 z-[1011] pointer-events-none">
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-[2001] pointer-events-none">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -144,9 +152,9 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[1010]"
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[2000]"
           />
-          <div className="fixed inset-0 flex items-center justify-center p-4 z-[1011] pointer-events-none">
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-[2001] pointer-events-none">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
