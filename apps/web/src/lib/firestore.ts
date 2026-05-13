@@ -78,7 +78,7 @@ export function useTodayPunches(userId: string | null, dateKey: string) {
         (snap) => {
           setData(
             snap.docs
-              .filter((d) => d.id !== '_schema')
+              .filter((d) => d.id !== '__schema__')
               .map((d) => ({ id: d.id, ...d.data() } as unknown as AttendancePunch)),
           );
           setLoading(false);
@@ -176,7 +176,7 @@ export function useHistoryRealtime(userId: string | null, limitCount = 30) {
         (snap) => {
           setData(
             snap.docs
-              .filter((d) => d.id !== '_schema')
+              .filter((d) => d.id !== '__schema__')
               .map((d) => ({ id: d.id, ...d.data() } as unknown as DailySummary)),
           );
           setLoading(false);
