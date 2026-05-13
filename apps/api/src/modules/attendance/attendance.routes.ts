@@ -16,11 +16,20 @@ router.get('/daily-summary/:dateKey', requireAuth, (req, res) => controller.getD
 router.get('/punches/:punchId/history', requireAuth, (req, res) => controller.getPunchHistory(req, res));
 
 // Admin / Manager — edit/delete punches
+router.get('/admin/today', requireAuth, requireRole('ADMIN', 'MANAGER'), (req, res) =>
+  controller.getAdminTodayPunches(req, res)
+);
+router.post('/admin/punch-corrections', requireAuth, requireRole('ADMIN', 'MANAGER'), (req, res) =>
+  controller.saveAdminPunchCorrection(req, res)
+);
 router.patch('/punches/:punchId', requireAuth, requireRole('ADMIN', 'MANAGER'), (req, res) =>
   controller.adminEditPunch(req, res)
 );
 router.delete('/punches/:punchId', requireAuth, requireRole('ADMIN'), (req, res) =>
   controller.adminDeletePunch(req, res)
+);
+router.get('/admin/employees/:userId/punches/page', requireAuth, requireRole('ADMIN', 'MANAGER'), (req, res) =>
+  controller.getEmployeePunchPage(req, res)
 );
 
 // Admin — reports

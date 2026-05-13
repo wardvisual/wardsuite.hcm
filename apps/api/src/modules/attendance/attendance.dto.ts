@@ -8,6 +8,15 @@ export interface AdminEditPunchDto {
   reason?: string;
 }
 
+export interface AdminPunchCorrectionDto {
+  userId: string;
+  punchId?: string;
+  timestamp: string;
+  punchType: 'IN' | 'OUT';
+  reason?: string;
+  isNew?: boolean;
+}
+
 export interface AdminDeletePunchDto {
   reason: string;
 }

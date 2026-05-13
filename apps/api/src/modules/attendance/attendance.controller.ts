@@ -42,6 +42,41 @@ export class AttendanceController {
     }
   };
 
+  getEmployeePunchPage = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.params.userId as string;
+      const parsedLimit = Number(req.query.limit ?? 20);
+      const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 20;
+      const cursor = (req.query.cursor as string) ?? undefined;
+      const page = await this.service.getEmployeePunchPage(userId, limit, cursor);
+      res.status(200).json(successWithMeta(page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore, limit }));
+    } catch (err: any) {
+      res.status(err.statusCode ?? 500).json(error(err.message));
+    }
+  };
+
+  getAdminTodayPunches = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const timezone = (req.query.timezone as string) ?? 'Asia/Manila';
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+      const data = await this.service.getAdminTodayPunches(timezone, limit);
+      res.status(200).json(success(data));
+    } catch (err: any) {
+      res.status(err.statusCode ?? 500).json(error(err.message));
+    }
+  };
+
+  saveAdminPunchCorrection = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const adminId = resolveActor(req);
+      const adminRole = req.user!.role;
+      const data = await this.service.saveAdminPunchCorrection(req.body, adminId, adminRole);
+      res.status(200).json(success(data, 'Punch correction saved'));
+    } catch (err: any) {
+      res.status(err.statusCode ?? 500).json(error(err.message));
+    }
+  };
+
   getDailySummary = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.id;

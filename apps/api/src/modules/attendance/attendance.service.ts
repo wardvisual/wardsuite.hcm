@@ -14,7 +14,7 @@ import {
   User,
   HistoryAction,
 } from '@api/types';
-import { PunchDto, AdminEditPunchDto } from './attendance.dto';
+import { PunchDto, AdminEditPunchDto, AdminPunchCorrectionDto } from './attendance.dto';
 
 export class AttendanceService {
   private db = getDb();
@@ -136,6 +136,103 @@ export class AttendanceService {
     };
   }
 
+  async getEmployeePunchPage(
+    userId: string,
+    limit = 20,
+    cursor?: string,
+  ): Promise<{ items: AttendancePunch[]; nextCursor: string | null; hasMore: boolean }> {
+    const pageSize = Number.isFinite(limit) && limit > 0 ? limit : 20;
+    const batchSize = Math.max(pageSize * 5, 100);
+    const items: AttendancePunch[] = [];
+    let nextCursor = cursor ?? null;
+    let hasMore = false;
+    let cursorSnap: FirebaseFirestore.DocumentSnapshot | null = null;
+
+    if (cursor) {
+      const snap = await this.db.collection('attendance').doc(cursor).get();
+      if (!snap.exists) {
+        throw Object.assign(new Error('Cursor not found'), { statusCode: 400 });
+      }
+      cursorSnap = snap;
+    }
+
+    while (items.length <= pageSize) {
+      let query = this.db.collection('attendance').orderBy('timestamp', 'desc').limit(batchSize);
+      if (cursorSnap) {
+        query = query.startAfter(cursorSnap);
+      }
+
+      const snap = await query.get();
+      const docs = snap.docs.filter((d) => d.id !== '_schema');
+      if (docs.length === 0) break;
+
+      for (const doc of docs) {
+        const punch = { id: doc.id, ...doc.data() } as AttendancePunch;
+        if (punch.userId === userId) {
+          items.push(punch);
+        }
+        cursorSnap = doc;
+        nextCursor = doc.id;
+
+        if (items.length > pageSize) {
+          hasMore = true;
+          break;
+        }
+      }
+
+      if (hasMore || docs.length < batchSize) {
+        break;
+      }
+    }
+
+    return {
+      items: items.slice(0, pageSize),
+      nextCursor: hasMore ? nextCursor : null,
+      hasMore,
+    };
+  }
+
+  async getAdminTodayPunches(timezone: string, limit?: number): Promise<AttendancePunch[]> {
+    const dateKey = getDateKey(new Date(), timezone);
+    const pageSize = Number.isFinite(limit) && limit && limit > 0 ? limit : Number.MAX_SAFE_INTEGER;
+    const batchSize = Math.min(Math.max(pageSize, 100), 500);
+    const items: AttendancePunch[] = [];
+    let cursorSnap: FirebaseFirestore.DocumentSnapshot | null = null;
+
+    while (items.length < pageSize) {
+      let query = this.db.collection('attendance').orderBy('timestamp', 'desc').limit(batchSize);
+      if (cursorSnap) {
+        query = query.startAfter(cursorSnap);
+      }
+
+      const snap = await query.get();
+      const docs = snap.docs.filter((d) => d.id !== '_schema');
+      if (docs.length === 0) break;
+
+      let hitOlderDay = false;
+      for (const doc of docs) {
+        const punch = { id: doc.id, ...doc.data() } as AttendancePunch;
+        cursorSnap = doc;
+
+        if (punch.dateKey === dateKey) {
+          items.push(punch);
+          if (items.length >= pageSize) {
+            break;
+          }
+        } else {
+          hitOlderDay = true;
+          break;
+        }
+      }
+
+      if (hitOlderDay || docs.length < batchSize) {
+        break;
+      }
+    }
+
+    return items;
+  }
+
   async getDailySummary(userId: string, dateKey: string): Promise<DailySummary | null> {
     const docId = `${userId}_${dateKey}`;
     const snap = await this.db.collection('dailySummary').doc(docId).get();
@@ -224,6 +321,133 @@ export class AttendanceService {
         undertimeMinutesBefore: summaryBefore.undertimeMinutes,
         undertimeMinutesAfter: summaryAfter.undertimeMinutes,
       } : null,
+    });
+
+    return after;
+  }
+
+  async saveAdminPunchCorrection(
+    dto: AdminPunchCorrectionDto,
+    adminId: string,
+    adminRole: string
+  ): Promise<AttendancePunch> {
+    const userDoc = await this.db.collection('users').doc(dto.userId).get();
+    if (!userDoc.exists) throw Object.assign(new Error('User not found'), { statusCode: 404 });
+
+    const user = userDoc.data() as User;
+    const timezone = user.timezone ?? 'Asia/Manila';
+    const timestamp = new Date(dto.timestamp);
+    if (Number.isNaN(timestamp.getTime())) {
+      throw Object.assign(new Error('Invalid punch timestamp'), { statusCode: 400 });
+    }
+
+    const isoNow = new Date().toISOString();
+    const dateKey = getDateKey(timestamp, timezone);
+    const weekKey = getWeekKey(timestamp, timezone);
+
+    if (dto.isNew || !dto.punchId) {
+      const pairGroup = await this.buildPairGroup(dto.userId, dateKey);
+      const punch: Omit<AttendancePunch, 'id'> = {
+        userId: dto.userId,
+        employeeCode: user.employeeCode,
+        dateKey,
+        weekKey,
+        timezone,
+        punchType: dto.punchType,
+        timestamp: timestamp.toISOString(),
+        source: 'admin',
+        scheduleSnapshot: user.schedule,
+        pairGroup,
+        isEdited: true,
+        editedAt: isoNow,
+        editedBy: adminId,
+        createdAt: isoNow,
+        updatedAt: isoNow,
+      };
+
+      const ref = await this.db.collection('attendance').add(punch);
+      const created = { id: ref.id, ...punch };
+
+      await this.writeHistory({
+        attendanceId: ref.id,
+        userId: dto.userId,
+        employeeCode: user.employeeCode,
+        dateKey,
+        weekKey,
+        action: 'CREATE_PUNCH',
+        changedBy: adminId,
+        changedByRole: adminRole,
+        reason: dto.reason ?? null,
+        before: null,
+        after: created,
+        summaryImpact: null,
+      });
+
+      await this.recomputeDailySummary(dto.userId, dateKey, timezone);
+      return created;
+    }
+
+    const ref = this.db.collection('attendance').doc(dto.punchId);
+    const snap = await ref.get();
+    if (!snap.exists) throw Object.assign(new Error('Punch not found'), { statusCode: 404 });
+
+    const before = { id: snap.id, ...snap.data() } as AttendancePunch;
+    const previousDateKey = before.dateKey;
+    const previousWeekKey = before.weekKey;
+    const previousPunchUserId = before.userId;
+
+    const after: AttendancePunch = {
+      ...before,
+      userId: dto.userId,
+      employeeCode: user.employeeCode,
+      dateKey,
+      weekKey,
+      timezone,
+      punchType: dto.punchType,
+      timestamp: timestamp.toISOString(),
+      source: before.source,
+      scheduleSnapshot: before.scheduleSnapshot ?? user.schedule,
+      pairGroup: await this.buildPairGroup(dto.userId, dateKey),
+      isEdited: true,
+      editedAt: isoNow,
+      editedBy: adminId,
+      updatedAt: isoNow,
+    };
+
+    await ref.set(after, { merge: true });
+
+    const summaryBefore = await this.getDailySummary(previousPunchUserId, previousDateKey);
+    await this.recomputeDailySummary(previousPunchUserId, previousDateKey, timezone);
+    if (previousPunchUserId !== dto.userId || previousDateKey !== dateKey) {
+      await this.recomputeDailySummary(dto.userId, dateKey, timezone);
+    }
+    const summaryAfter = await this.getDailySummary(dto.userId, dateKey);
+
+    await this.writeHistory({
+      attendanceId: before.id,
+      userId: dto.userId,
+      employeeCode: user.employeeCode,
+      dateKey,
+      weekKey,
+      action: 'UPDATE_PUNCH',
+      changedBy: adminId,
+      changedByRole: adminRole,
+      reason: dto.reason ?? null,
+      before,
+      after,
+      summaryImpact:
+        previousPunchUserId === dto.userId && previousDateKey === dateKey && summaryBefore && summaryAfter
+          ? {
+            regularMinutesBefore: summaryBefore.regularMinutes,
+            regularMinutesAfter: summaryAfter.regularMinutes,
+            overtimeMinutesBefore: summaryBefore.overtimeMinutes,
+            overtimeMinutesAfter: summaryAfter.overtimeMinutes,
+            lateMinutesBefore: summaryBefore.lateMinutes,
+            lateMinutesAfter: summaryAfter.lateMinutes,
+            undertimeMinutesBefore: summaryBefore.undertimeMinutes,
+            undertimeMinutesAfter: summaryAfter.undertimeMinutes,
+          }
+          : null,
     });
 
     return after;
@@ -348,7 +572,12 @@ export class AttendanceService {
       .filter((d) => d.id !== '_schema')
       .map((d) => ({ id: d.id, ...d.data() }) as AttendancePunch);
 
-    if (punches.length === 0) return;
+    const docId = `${userId}_${dateKey}`;
+
+    if (punches.length === 0) {
+      await this.db.collection('dailySummary').doc(docId).delete();
+      return;
+    }
 
     const userDoc = await this.db.collection('users').doc(userId).get();
     const user = userDoc.data() as User;
@@ -368,7 +597,6 @@ export class AttendanceService {
       : null;
 
     const now = new Date().toISOString();
-    const docId = `${userId}_${dateKey}`;
 
     const summary: DailySummary = {
       id: docId,
@@ -401,6 +629,17 @@ export class AttendanceService {
     const [sh, sm] = schedule.start.split(':').map(Number);
     const [eh, em] = schedule.end.split(':').map(Number);
     return (eh * 60 + em) - (sh * 60 + sm) - schedule.breakMinutes;
+  }
+
+  private async buildPairGroup(userId: string, dateKey: string): Promise<string> {
+    const snap = await this.db
+      .collection('attendance')
+      .where('userId', '==', userId)
+      .where('dateKey', '==', dateKey)
+      .get();
+
+    const count = snap.docs.filter((doc) => doc.id !== '_schema').length;
+    return `${dateKey}_shift_${Math.floor(count / 2) + 1}`;
   }
 
   private async writeHistory(data: Omit<AttendanceHistory, 'id' | 'changedAt'>): Promise<void> {
