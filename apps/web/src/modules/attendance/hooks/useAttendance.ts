@@ -17,11 +17,12 @@ export function useAttendance() {
   } = useAttendanceStore();
 
   const timezone = user?.timezone ?? 'Asia/Manila';
+  const userId = user?.uid ?? user?.id ?? null;
   const dateKey = getTodayKey(timezone);
 
   // Firestore real-time → sync to Zustand store (background refresh)
-  const { data: realtimePunches, loading: punchesLoading } = useTodayPunches(user?.id ?? null, dateKey);
-  const { data: realtimeSummary, loading: summaryLoading } = useDailySummaryRealtime(user?.id ?? null, dateKey);
+  const { data: realtimePunches, loading: punchesLoading } = useTodayPunches(userId, dateKey);
+  const { data: realtimeSummary, loading: summaryLoading } = useDailySummaryRealtime(userId, dateKey);
 
   useEffect(() => { setTodayPunches(realtimePunches); }, [realtimePunches, setTodayPunches]);
   useEffect(() => {

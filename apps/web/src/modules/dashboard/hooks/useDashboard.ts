@@ -6,9 +6,11 @@ import { useAttendanceStore } from '@web/modules/attendance/store/attendance.sto
 export function useDashboard() {
   const { user } = useAuthStore();
   const timezone = user?.timezone ?? 'Asia/Manila';
+  const userId = user?.uid ?? user?.id ?? null;
   const { history, setHistory, setHistoryLoading } = useAttendanceStore();
 
-  const { data: historyRealtime, loading: historyLoading } = useHistoryRealtime(user?.id ?? null, 14);
+  const { data: historyRealtime, loading: historyLoading } = useHistoryRealtime(userId, 14);
+
   const last7 = history.slice(0, 7).reverse();
 
   useEffect(() => {
