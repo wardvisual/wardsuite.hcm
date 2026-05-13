@@ -34,6 +34,25 @@ export function formatDateKey(dateKey: string): string {
   });
 }
 
+export function formatWeekRange(startDate: string, endDate: string): string {
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  const startYear = start.getFullYear();
+  const endYear = end.getFullYear();
+  const sameYear = startYear === endYear;
+
+  const dateFormatter = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+
+  if (sameYear) {
+    return `${startYear}, ${dateFormatter.format(start)} - ${dateFormatter.format(end)}`;
+  }
+
+  return `${dateFormatter.format(start)}, ${startYear} - ${dateFormatter.format(end)}, ${endYear}`;
+}
+
 export function formatWeekdayShort(dateKey: string): string {
   return new Date(`${dateKey}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' });
 }
