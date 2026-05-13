@@ -12,7 +12,7 @@ export function PublicImage({ file, alt, className, imgClassName, rounded = true
   return (
     <div className={cn('overflow-hidden', rounded && 'rounded-[24px]', className)}>
       <img
-        src={`/${file}`}
+        src={`../../assets/${file}`}
         alt={alt}
         className={cn('w-full h-full object-cover', imgClassName)}
       />
