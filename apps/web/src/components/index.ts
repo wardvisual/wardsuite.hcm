@@ -1,5 +1,7 @@
 // ── Auth ─────────────────────────────────────────────────────────────────────
-export * as AuthComponent from './auth/AuthGuard';
+import { AuthGuard } from './auth/AuthGuard';
+import { FirebaseAuthSync } from './auth/FirebaseAuthSync';
+export const AuthComponent = { AuthGuard, FirebaseAuthSync };
 
 // ── Layout ───────────────────────────────────────────────────────────────────
 import { Shell } from './layout/Shell';
