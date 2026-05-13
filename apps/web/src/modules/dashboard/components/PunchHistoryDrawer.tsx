@@ -1,19 +1,128 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { CalendarDays, Clock3, LogIn, LogOut } from 'lucide-react';
 import { Drawer } from '@web/components';
+import { useAuthStore } from '@web/modules/auth/store/auth.store';
+import { attendanceApi } from '@web/modules/attendance/api/attendance.api';
 import type { AttendancePunch } from '@web/modules/attendance';
 import { cn, formatDetailedDateTime, formatTime } from '@web/lib/utils';
 
 interface PunchHistoryDrawerProps {
     open: boolean;
-    punches: AttendancePunch[];
     onClose: () => void;
 }
 
-export function PunchHistoryDrawer({ open, punches, onClose }: PunchHistoryDrawerProps) {
-    const sortedPunches = [...punches].sort(
-        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+const PAGE_SIZE = 20;
+const SCROLL_THRESHOLD_PX = 180;
+const MAX_RENDERED_PUNCHES = 60;
+
+type PunchHistoryCache = {
+    punches: AttendancePunch[];
+    nextCursor: string | null;
+    hasMore: boolean;
+};
+
+const punchHistoryCache = new Map<string, PunchHistoryCache>();
+
+function getCacheKey(timezone: string) {
+    const dateKey = new Date().toLocaleDateString('sv-SE', { timeZone: timezone }).slice(0, 10);
+    return `${timezone}_${dateKey}`;
+}
+
+function mergePunches(current: AttendancePunch[], next: AttendancePunch[]) {
+    return [...new Map([...current, ...next].map((punch) => [punch.id, punch])).values()].sort(
+        (left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime(),
     );
+}
+
+function trimPunches(punches: AttendancePunch[]) {
+    return punches.length > MAX_RENDERED_PUNCHES ? punches.slice(0, MAX_RENDERED_PUNCHES) : punches;
+}
+
+export function PunchHistoryDrawer({ open, onClose }: PunchHistoryDrawerProps) {
+    const { user } = useAuthStore();
+    const timezone = user?.timezone ?? 'Asia/Manila';
+    const cacheKey = useMemo(() => getCacheKey(timezone), [timezone]);
+    const scrollRef = useRef<HTMLDivElement | null>(null);
+    const [punches, setPunches] = useState<AttendancePunch[]>([]);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingInitial, setLoadingInitial] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const persistCache = useCallback((nextPunches: AttendancePunch[], cursor: string | null, more: boolean) => {
+        punchHistoryCache.set(cacheKey, {
+            punches: trimPunches(nextPunches),
+            nextCursor: cursor,
+            hasMore: more,
+        });
+    }, [cacheKey]);
+
+    const loadPage = useCallback(async (mode: 'refresh' | 'more') => {
+        if (mode === 'more' && (!hasMore || loadingMore || loadingInitial)) {
+            return;
+        }
+
+        if (mode === 'refresh' && loadingMore) {
+            return;
+        }
+
+        if (mode === 'more') {
+            setLoadingMore(true);
+        } else if (punches.length === 0) {
+            setLoadingInitial(true);
+        }
+
+        setError(null);
+
+        try {
+            const page = await attendanceApi.getTodayPunchesPage(
+                timezone,
+                PAGE_SIZE,
+                mode === 'more' ? nextCursor ?? undefined : undefined,
+            );
+
+            setPunches((current) => {
+                const merged = mode === 'more' ? mergePunches(current, page.items) : mergePunches(current, page.items);
+                const trimmed = trimPunches(merged);
+                persistCache(trimmed, page.nextCursor, page.hasMore);
+                return trimmed;
+            });
+            setNextCursor(page.nextCursor);
+            setHasMore(page.hasMore);
+        } catch (err: any) {
+            setError(err.message ?? 'Failed to load punch history');
+        } finally {
+            setLoadingInitial(false);
+            setLoadingMore(false);
+        }
+    }, [hasMore, loadingInitial, loadingMore, nextCursor, persistCache, punches.length, timezone]);
+
+    useEffect(() => {
+        if (!open) return;
+
+        const cached = punchHistoryCache.get(cacheKey);
+        if (cached) {
+            setPunches(cached.punches);
+            setNextCursor(cached.nextCursor);
+            setHasMore(cached.hasMore);
+            void loadPage('refresh');
+            return;
+        }
+
+        void loadPage('refresh');
+    }, [cacheKey, loadPage, open]);
+
+    const sortedPunches = useMemo(() => punches, [punches]);
+
+    const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+        const element = event.currentTarget;
+        const distanceFromBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
+        if (distanceFromBottom < SCROLL_THRESHOLD_PX && hasMore && !loadingMore && !loadingInitial) {
+            void loadPage('more');
+        }
+    }, [hasMore, loadingInitial, loadingMore, loadPage]);
 
     return (
         <Drawer
@@ -36,12 +145,26 @@ export function PunchHistoryDrawer({ open, punches, onClose }: PunchHistoryDrawe
                     </div>
                 </div>
 
-                {sortedPunches.length === 0 ? (
+                {error && (
+                    <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-700">
+                        {error}
+                    </div>
+                )}
+
+                {loadingInitial && sortedPunches.length === 0 ? (
+                    <div className="rounded-3xl border border-dashed border-[#e5e7eb] bg-white px-4 py-10 text-center">
+                        <p className="text-sm font-medium text-[#6b7280]">Loading punch history...</p>
+                    </div>
+                ) : sortedPunches.length === 0 ? (
                     <div className="rounded-3xl border border-dashed border-[#e5e7eb] bg-white px-4 py-10 text-center">
                         <p className="text-sm font-medium text-[#6b7280]">No punches yet</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div
+                        ref={scrollRef}
+                        onScroll={handleScroll}
+                        className="max-h-[calc(100dvh-17rem)] space-y-3 overflow-y-auto pr-1"
+                    >
                         {sortedPunches.map((p, index) => {
                             const isIn = p.punchType === 'IN';
                             const Icon = isIn ? LogIn : LogOut;
@@ -92,6 +215,10 @@ export function PunchHistoryDrawer({ open, punches, onClose }: PunchHistoryDrawe
                                 </motion.div>
                             );
                         })}
+
+                        <div className="py-2 text-center text-xs text-[#9ca3af]">
+                            {loadingMore ? 'Loading more punches...' : hasMore ? 'Scroll for more' : 'No more punches to load'}
+                        </div>
                     </div>
                 )}
             </div>

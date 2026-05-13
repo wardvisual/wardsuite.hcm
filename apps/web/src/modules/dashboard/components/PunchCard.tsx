@@ -53,10 +53,10 @@ function PunchButton({ action, isPunching, isPunchedIn, onPunch }: PunchButtonPr
         animate={{
           boxShadow: isPunching
             ? [
-                '0_28px_70px_rgba(15,23,42,0.24)',
-                '0_34px_85px_rgba(16,185,129,0.28)',
-                '0_28px_70px_rgba(15,23,42,0.24)',
-              ]
+              '0_28px_70px_rgba(15,23,42,0.24)',
+              '0_34px_85px_rgba(16,185,129,0.28)',
+              '0_28px_70px_rgba(15,23,42,0.24)',
+            ]
             : '0_28px_70px_rgba(15,23,42,0.24)',
         }}
         className={`relative z-10 flex h-48 w-48 cursor-pointer overflow-hidden flex-col items-center justify-center gap-2 rounded-full font-black text-white shadow-[0_28px_70px_rgba(15,23,42,0.24)] disabled:cursor-not-allowed disabled:opacity-60 sm:h-56 sm:w-56 lg:h-64 lg:w-64 ${isOut
@@ -106,7 +106,6 @@ function PunchButton({ action, isPunching, isPunchedIn, onPunch }: PunchButtonPr
 }
 
 interface PunchCardProps {
-  todayPunches: AttendancePunch[];
   recentPunches: AttendancePunch[];
   todaySummary: DailySummary | null;
   isPunchedIn: boolean;
@@ -117,7 +116,7 @@ interface PunchCardProps {
 }
 
 export function PunchCard({
-  todayPunches, recentPunches, todaySummary, isPunchedIn, nextAction, isPunching, error, onPunch,
+  recentPunches, todaySummary, isPunchedIn, nextAction, isPunching, error, onPunch,
 }: PunchCardProps) {
   const [punchImpact, setPunchImpact] = useState(false);
   const [ui, dispatch] = useReducer(
@@ -314,7 +313,6 @@ export function PunchCard({
 
       <PunchHistoryDrawer
         open={ui.historyOpen}
-        punches={todayPunches}
         onClose={() => dispatch({ type: 'CLOSE_HISTORY' })}
       />
     </motion.div>

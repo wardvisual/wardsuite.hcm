@@ -1,6 +1,12 @@
 import { apiRequest } from '@web/services/api.service';
 import { AttendancePunch, AttendanceHistory, DailySummary } from '../types/attendance.types';
 
+export interface AttendancePunchPage {
+  items: AttendancePunch[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
 export const attendanceApi = {
   punch: (timezone?: string) =>
     apiRequest.post<AttendancePunch>('/attendance/punch', { timezone, source: 'web' }),
@@ -11,6 +17,19 @@ export const attendanceApi = {
       params.set('limit', String(limit));
     }
     return apiRequest.get<AttendancePunch[]>(`/attendance/today?${params.toString()}`);
+  },
+
+  getTodayPunchesPage: (timezone = 'Asia/Manila', limit = 20, cursor?: string | null) => {
+    const params = new URLSearchParams({ timezone, limit: String(limit) });
+    if (cursor) {
+      params.set('cursor', cursor);
+    }
+    return apiRequest.getResponse<AttendancePunch[]>(`/attendance/today/page?${params.toString()}`)
+      .then((response) => ({
+        items: response.data,
+        nextCursor: (response.meta?.nextCursor as string | null) ?? null,
+        hasMore: Boolean(response.meta?.hasMore),
+      }) satisfies AttendancePunchPage);
   },
 
   getDailySummary: (dateKey: string) =>

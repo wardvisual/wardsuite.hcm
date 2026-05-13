@@ -28,7 +28,6 @@ export default function DashboardPage() {
 
       <div className="space-y-6">
         <PunchCard
-          todayPunches={todayPunches}
           recentPunches={recentPunches}
           todaySummary={todaySummary}
           isPunchedIn={isPunchedIn}

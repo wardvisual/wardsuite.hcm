@@ -21,10 +21,14 @@ http.interceptors.response.use(
 );
 
 type ApiResponse<T> = { data: T };
+type ApiEnvelope<T> = { data: T; meta?: Record<string, any> };
 
 export const apiRequest = {
   get: <T>(path: string) =>
     http.get<ApiResponse<T>>(path).then((r) => r.data.data),
+
+  getResponse: <T>(path: string) =>
+    http.get<ApiEnvelope<T>>(path).then((r) => r.data),
 
   post: <T>(path: string, body?: unknown) =>
     http.post<ApiResponse<T>>(path, body).then((r) => r.data.data),
