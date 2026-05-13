@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import type { AttendancePunch, DailySummary, WeeklySummary } from '@web/modules/attendance';
-import type { AttendanceHistory } from '@web/modules/attendance/types/attendance.types';
 import { getCurrentWeekKey, getTodayKey } from '@web/lib/utils';
 
 type ReportMode = 'daily' | 'weekly';
@@ -35,7 +34,7 @@ export interface PunchesState {
     editTimestamp: string;
     editReason: string;
     deleteReason: string;
-    history: AttendanceHistory[];
+    history: AttendancePunch[];
     historyLoading: boolean;
 }
 
@@ -53,7 +52,7 @@ export type PunchesAction =
     | { type: 'SET_EDIT_TIMESTAMP'; value: string }
     | { type: 'SET_EDIT_REASON'; value: string }
     | { type: 'SET_DELETE_REASON'; value: string }
-    | { type: 'SET_HISTORY'; history: AttendanceHistory[] }
+    | { type: 'SET_HISTORY'; history: AttendancePunch[] }
     | { type: 'SET_HISTORY_LOADING'; loading: boolean };
 
 function reportsReducer(state: ReportsState, action: ReportsAction): ReportsState {

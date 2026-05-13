@@ -1,7 +1,37 @@
 import { useCallback, useEffect } from 'react';
-import { attendanceApi } from '@web/modules/attendance/api/attendance.api';
 import { adminApi } from '@web/modules/dashboard/api/admin.api';
 import { useDashboardStore } from '@web/modules/dashboard/store/dashboard.store';
+import type { AttendancePunch } from '@web/modules/attendance';
+
+type EmployeePunchRow = {
+    employeeCode: string;
+    punches: AttendancePunch[];
+    latestPunch: AttendancePunch;
+    firstPunch: AttendancePunch;
+    lastPunch: AttendancePunch;
+    punchCount: number;
+};
+
+function groupByEmployee(punches: AttendancePunch[]): EmployeePunchRow[] {
+    const grouped = new Map<string, AttendancePunch[]>();
+    punches
+        .slice()
+        .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
+        .forEach((punch) => {
+            const key = punch.employeeCode;
+            if (!grouped.has(key)) grouped.set(key, []);
+            grouped.get(key)!.push(punch);
+        });
+
+    return [...grouped.entries()].map(([employeeCode, employeePunches]) => ({
+        employeeCode,
+        punches: employeePunches,
+        latestPunch: employeePunches[0],
+        firstPunch: employeePunches[employeePunches.length - 1],
+        lastPunch: employeePunches[0],
+        punchCount: employeePunches.length,
+    }));
+}
 
 export function useAdminPunches() {
     const { punches, dispatchPunches } = useDashboardStore();
@@ -10,8 +40,19 @@ export function useAdminPunches() {
         dispatchPunches({ type: 'SET_LOADING', loading: true });
         dispatchPunches({ type: 'SET_ERROR', error: null });
         try {
-            const data = await attendanceApi.getTodayPunches('Asia/Manila');
-            dispatchPunches({ type: 'SET_PUNCHES', punches: Array.isArray(data) ? data : [] });
+            const data = await adminApi.getTodayPunches('Asia/Manila');
+            const nextPunches = Array.isArray(data) ? data : [];
+            dispatchPunches({ type: 'SET_PUNCHES', punches: nextPunches });
+
+            const currentState = useDashboardStore.getState();
+            if (currentState.punches.historyTarget) {
+                const employeeCode = currentState.punches.historyTarget.employeeCode;
+                const refreshedHistory = nextPunches
+                    .filter((punch) => punch.employeeCode === employeeCode)
+                    .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime());
+
+                dispatchPunches({ type: 'SET_HISTORY', history: refreshedHistory });
+            }
         } catch (err: any) {
             dispatchPunches({ type: 'SET_ERROR', error: err.message ?? 'Failed to load punches' });
         } finally {
@@ -31,17 +72,11 @@ export function useAdminPunches() {
         dispatchPunches({ type: 'OPEN_DELETE', target });
     };
 
-    const openHistory = async (target: any) => {
+    const openHistory = (historyPunches: AttendancePunch[]) => {
+        const target = historyPunches[0] ?? null;
+        if (!target) return;
         dispatchPunches({ type: 'OPEN_HISTORY', target });
-        dispatchPunches({ type: 'SET_HISTORY_LOADING', loading: true });
-        try {
-            const data = await attendanceApi.getPunchHistory(target.id);
-            dispatchPunches({ type: 'SET_HISTORY', history: Array.isArray(data) ? data : [] });
-        } catch {
-            dispatchPunches({ type: 'SET_HISTORY', history: [] });
-        } finally {
-            dispatchPunches({ type: 'SET_HISTORY_LOADING', loading: false });
-        }
+        dispatchPunches({ type: 'SET_HISTORY', history: historyPunches });
     };
 
     const closeEdit = () => dispatchPunches({ type: 'CLOSE_EDIT' });
@@ -80,6 +115,7 @@ export function useAdminPunches() {
 
     return {
         punches,
+        groupedPunches: groupByEmployee(punches.punches),
         fetchPunches,
         openEdit,
         openDelete,
