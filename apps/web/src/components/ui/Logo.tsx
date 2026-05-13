@@ -1,3 +1,4 @@
+import LogoImg from '@web/assets/logo-b.png';
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
 }
@@ -8,12 +9,7 @@ export function Logo({ size = 'md' }: LogoProps) {
 
   return (
     <div className="flex items-center gap-2.5">
-      <div className={`${iconSize} rounded-2xl bg-[#111111] flex items-center justify-center shrink-0`}>
-        <span className="text-white font-black text-sm">W</span>
-      </div>
-      <span className={`${textSize} font-black text-[#111111] tracking-tight`}>
-        WardSuite
-      </span>
+      <img src={LogoImg} alt="Logo" className='h-10' />
     </div>
   );
 }
