@@ -117,7 +117,7 @@ export default function AdminReportsPage() {
       </div>
 
       {/* Mode toggle + date selector */}
-      <div className="glass-card p-4 flex flex-wrap gap-4 items-center">
+      <div className="floating-card p-4 flex flex-wrap gap-4 items-center">
         <div className="flex gap-1 bg-[#f5f5f5] rounded-2xl p-1">
           {(['daily', 'weekly'] as ReportMode[]).map((m) => (
             <button
@@ -172,7 +172,7 @@ export default function AdminReportsPage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="glass-card p-6"
+        className="floating-card p-6"
       >
         {error && (
           <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-2xl">
