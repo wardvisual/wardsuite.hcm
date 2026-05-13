@@ -17,6 +17,7 @@ interface AttendanceState {
   upsertHistorySummary: (summary: DailySummary) => void;
   setPunching: (v: boolean) => void;
   setError: (e: string | null) => void;
+  resetAttendance: () => void;
 }
 
 export const useAttendanceStore = create<AttendanceState>()(
@@ -46,6 +47,14 @@ export const useAttendanceStore = create<AttendanceState>()(
       },
       setPunching: (isPunching) => set({ isPunching }),
       setError: (error) => set({ error }),
+      resetAttendance: () => set({
+        todayPunches: [],
+        todaySummary: null,
+        history: [],
+        historyLoading: false,
+        isPunching: false,
+        error: null,
+      }),
     }),
     {
       name: 'hcm-attendance',

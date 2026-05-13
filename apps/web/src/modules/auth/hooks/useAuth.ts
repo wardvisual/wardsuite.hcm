@@ -2,10 +2,14 @@ import { useCallback } from 'react';
 import { useAuthStore } from '@web/modules/auth/store/auth.store';
 import { authService } from '@web/modules/auth/services/auth.service';
 import { LoginFormValues, RegisterFormValues } from '@web/modules/auth/types/auth.types';
+import { useAttendanceStore } from '@web/modules/attendance/store/attendance.store';
+import { useDashboardStore } from '@web/modules/dashboard/store/dashboard.store';
 
 export function useAuth() {
   const { user, token, isAuthenticated, isLoading, error, setAuth, clearAuth, setLoading, setError } =
     useAuthStore();
+  const { resetAttendance } = useAttendanceStore();
+  const { resetDashboard } = useDashboardStore();
 
   const login = useCallback(
     async (values: LoginFormValues) => {
@@ -13,6 +17,8 @@ export function useAuth() {
       setError(null);
       try {
         const { user, token } = await authService.login(values);
+        resetAttendance();
+        resetDashboard();
         setAuth(user, token);
       } catch (err: any) {
         setError(err.message ?? 'Login failed');
@@ -42,8 +48,10 @@ export function useAuth() {
 
   const logout = useCallback(async () => {
     await authService.logout();
+    resetAttendance();
+    resetDashboard();
     clearAuth();
-  }, [clearAuth]);
+  }, [clearAuth, resetAttendance, resetDashboard]);
 
   return { user, token, isAuthenticated, isLoading, error, login, register, logout };
 }

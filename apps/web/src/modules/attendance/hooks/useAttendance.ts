@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuthStore } from '@web/modules/auth/store/auth.store';
-import { useTodayPunches, useDailySummaryRealtime } from '@web/lib/firestore';
 import type { AttendancePunch } from '../types/attendance.types';
 import { useAttendanceStore } from '../store/attendance.store';
 import { attendanceApi } from '../api/attendance.api';
@@ -18,6 +17,7 @@ function normalizePunches(punches: AttendancePunch[]): AttendancePunch[] {
 export function useAttendance() {
   const { user } = useAuthStore();
   const [recentPunches, setRecentPunches] = useState<AttendancePunch[]>([]);
+  const [loading, setLoading] = useState(true);
   const {
     todayPunches, todaySummary, isPunching, error,
     setTodayPunches, setTodaySummary, upsertHistorySummary,
@@ -28,20 +28,52 @@ export function useAttendance() {
   const userId = user?.uid ?? user?.id ?? null;
   const dateKey = getTodayKey(timezone);
 
-  // Firestore real-time → sync to Zustand store (background refresh)
-  const { data: realtimePunches, loading: punchesLoading } = useTodayPunches(userId, dateKey);
-  const { data: realtimeSummary, loading: summaryLoading } = useDailySummaryRealtime(userId, dateKey);
+  useEffect(() => {
+    let cancelled = false;
 
-  useEffect(() => {
-    const normalized = normalizePunches(realtimePunches);
-    setTodayPunches(normalized);
-    setRecentPunches(normalized.slice(0, 4));
-  }, [realtimePunches, setTodayPunches]);
-  useEffect(() => {
-    if (!realtimeSummary) return;
-    setTodaySummary(realtimeSummary);
-    upsertHistorySummary(realtimeSummary);
-  }, [realtimeSummary, setTodaySummary, upsertHistorySummary]);
+    if (!userId) {
+      setTodayPunches([]);
+      setTodaySummary(null);
+      setRecentPunches([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    Promise.all([
+      attendanceApi.getTodayPunches(timezone, 4),
+      attendanceApi.getDailySummary(dateKey),
+    ])
+      .then(([punches, summary]) => {
+        if (cancelled) return;
+
+        const normalized = normalizePunches(punches);
+        setTodayPunches(normalized);
+        setRecentPunches(normalized.slice(0, 4));
+
+        if (summary) {
+          setTodaySummary(summary);
+          upsertHistorySummary(summary);
+        } else {
+          setTodaySummary(null);
+        }
+      })
+      .catch((err: any) => {
+        if (!cancelled) {
+          setError(err.message ?? 'Failed to load attendance data');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dateKey, setError, setTodayPunches, setTodaySummary, timezone, upsertHistorySummary, userId]);
 
   const latestPunch = todayPunches.length > 0 ? todayPunches[0] : null;
   const isPunchedIn = latestPunch?.punchType === 'IN';
@@ -101,8 +133,8 @@ export function useAttendance() {
     isPunching,
     error,
     dateKey,
-    punchesLoading,
-    summaryLoading,
+    punchesLoading: loading,
+    summaryLoading: loading,
     recentPunches,
     punch,
   };

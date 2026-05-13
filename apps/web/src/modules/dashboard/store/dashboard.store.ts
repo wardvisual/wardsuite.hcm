@@ -123,6 +123,7 @@ interface DashboardStore {
     punches: PunchesState;
     dispatchReports: (action: ReportsAction) => void;
     dispatchPunches: (action: PunchesAction) => void;
+    resetDashboard: () => void;
 }
 
 export const useDashboardStore = create<DashboardStore>((set, get) => ({
@@ -151,6 +152,31 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     },
     dispatchReports: (action) => set({ reports: reportsReducer(get().reports, action) }),
     dispatchPunches: (action) => set({ punches: punchesReducer(get().punches, action) }),
+    resetDashboard: () => set({
+        reports: {
+            mode: 'daily',
+            dateKey: getTodayKey(),
+            weekKey: getCurrentWeekKey(),
+            dailyData: [],
+            weeklyData: [],
+            loading: false,
+            error: null,
+        },
+        punches: {
+            punches: [],
+            loading: false,
+            error: null,
+            saving: false,
+            editTarget: null,
+            deleteTarget: null,
+            historyTarget: null,
+            editTimestamp: '',
+            editReason: '',
+            deleteReason: '',
+            history: [],
+            historyLoading: false,
+        },
+    }),
 }));
 
 export type { ReportMode };
