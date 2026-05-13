@@ -317,7 +317,7 @@ export class AttendanceService {
       .get();
 
     const punches = punchesSnap.docs
-      .filter((d) => d.id !== '__schema__')
+      .filter((d) => d.id !== '_schema')
       .map((d) => ({ id: d.id, ...d.data() }) as AttendancePunch);
 
     if (punches.length === 0) return;
