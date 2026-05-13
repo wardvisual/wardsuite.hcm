@@ -17,20 +17,20 @@
   "license": "ISC",
   "dependencies": {
     "@firebase/firestore": "^4.14.1",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.7.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "firebase-admin": "^13.9.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.5.0"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.6",
-    "@types/node": "^25.7.0",
     "eslint": "^10.3.0",
     "prettier": "^3.8.3",
-    "ts-node": "^10.9.2",
-    "ts-node-dev": "^2.0.0",
-    "tsconfig-paths": "^4.2.0"
+    "ts-node-dev": "^2.0.0"
   }
 }
