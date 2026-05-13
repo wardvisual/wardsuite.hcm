@@ -3,6 +3,7 @@ import { Sidebar } from './Sidebar';
 import { AnimatePresence, motion } from 'motion/react';
 import { Bell, Menu, Search } from 'lucide-react';
 import { useAuthStore } from '@web/modules/auth/store/auth.store';
+import { greeting, todayLabel } from '@web/lib/utils';
 
 interface ShellProps {
   children: React.ReactNode;
@@ -36,14 +37,12 @@ export function Shell({ children }: ShellProps) {
             <span className="sr-only">Open menu</span>
           </button>
 
-          {/* Center: search (hidden on small screens) */}
-          <div className="hidden md:flex flex-1 max-w-sm items-center gap-3 bg-[#f5f5f5] rounded-2xl px-4 h-10">
-            <Search className="w-4 h-4 text-[#bbbbbb] shrink-0" />
-            <input
-              type="search"
-              placeholder="Search…"
-              className="bg-transparent text-sm text-[#111111] placeholder:text-[#bbbbbb] outline-none w-full"
-            />
+          {/* Center: greeting + today label */}
+          <div className="hidden md:flex flex-1 max-w-xl flex-col justify-center px-3 min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#bbbbbb]">
+              {greeting()}, {user?.name?.split(' ')[0] ?? 'there'}
+            </p>
+            <p className="mt-1 truncate text-sm font-bold text-[#111111]">{todayLabel()}</p>
           </div>
 
           {/* Right: notifications + user */}

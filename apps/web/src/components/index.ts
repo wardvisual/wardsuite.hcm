@@ -15,3 +15,4 @@ export { Modal } from './ui/Modal';
 export { Drawer } from './ui/Modals';
 export { PublicImage } from './ui/PublicImage';
 export { Logo } from './ui/Logo';
+export { Skeleton } from './ui/Skeleton';

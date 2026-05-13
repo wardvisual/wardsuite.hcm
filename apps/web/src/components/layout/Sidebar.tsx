@@ -110,7 +110,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 <p className="font-black text-[#bbbbbb] text-[10px] uppercase tracking-[0.3em]">Admin</p>
               </div>
               {adminNav.map((item) => (
-                <NavItem key={item.path} {...item} />
+                <NavItem key={`${item.label}-${item.path}`} {...item} />
               ))}
             </>
           )}
