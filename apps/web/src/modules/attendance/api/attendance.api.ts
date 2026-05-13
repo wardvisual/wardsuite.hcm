@@ -32,6 +32,19 @@ export const attendanceApi = {
       }) satisfies AttendancePunchPage);
   },
 
+  getEmployeePunchesPage: (userId: string, limit = 20, cursor?: string | null) => {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) {
+      params.set('cursor', cursor);
+    }
+    return apiRequest.getResponse<AttendancePunch[]>(`/attendance/admin/employees/${userId}/punches/page?${params.toString()}`)
+      .then((response) => ({
+        items: response.data,
+        nextCursor: (response.meta?.nextCursor as string | null) ?? null,
+        hasMore: Boolean(response.meta?.hasMore),
+      }) satisfies AttendancePunchPage);
+  },
+
   getDailySummary: (dateKey: string) =>
     apiRequest.get<DailySummary | null>(`/attendance/daily-summary/${dateKey}`),
 

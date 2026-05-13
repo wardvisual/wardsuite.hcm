@@ -53,7 +53,6 @@ export function useAttendance() {
     setError(null);
     try {
       const newPunch = await attendanceApi.punch(timezone);
-      // Optimistic update: immediately reflect new punch in store before Firestore catches up
       const current = useAttendanceStore.getState().todayPunches;
       const normalized = normalizePunches([...current, newPunch]);
       setTodayPunches(normalized);
