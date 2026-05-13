@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, Clock3, Edit2, LogIn, LogOut, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Drawer, Modal } from '@web/components';
@@ -8,6 +8,7 @@ import { cn, formatDetailedDateTime, formatTime } from '@web/lib/utils';
 
 interface HistoryModalProps {
     open: boolean;
+    userId: string | null;
     punches: AttendancePunch[];
     employeeCode: string | null;
     onClose: () => void;
@@ -15,6 +16,11 @@ interface HistoryModalProps {
 }
 
 type FormMode = 'update' | 'insert' | null;
+type FilterPunchType = 'ALL' | 'IN' | 'OUT';
+
+const PAGE_SIZE = 20;
+const MAX_RENDERED_PUNCHES = 80;
+const SCROLL_THRESHOLD_PX = 180;
 
 function toDateInputValue(timestamp: string): string {
     return new Date(timestamp).toISOString().slice(0, 10);
@@ -29,40 +35,116 @@ function buildTimestamp(dateValue: string, timeValue: string): string {
     return new Date(`${dateValue}T${timeValue}:00`).toISOString();
 }
 
-export function HistoryModal({ open, punches, employeeCode, onClose, onSaved }: HistoryModalProps) {
-    const sortedPunches = useMemo(
-        () => [...punches].sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime()),
-        [punches],
+function mergePunches(current: AttendancePunch[], next: AttendancePunch[]) {
+    return [...new Map([...current, ...next].map((punch) => [punch.id, punch])).values()].sort(
+        (left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime(),
     );
-    const defaultPunch = sortedPunches[0] ?? null;
+}
+
+function trimPunches(punches: AttendancePunch[]) {
+    return punches.length > MAX_RENDERED_PUNCHES ? punches.slice(0, MAX_RENDERED_PUNCHES) : punches;
+}
+
+export function HistoryModal({ open, userId, punches, employeeCode, onClose, onSaved }: HistoryModalProps) {
+    const scrollRef = useRef<HTMLDivElement | null>(null);
+    const [history, setHistory] = useState<AttendancePunch[]>(punches);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingInitial, setLoadingInitial] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [historyFromDate, setHistoryFromDate] = useState('');
+    const [historyToDate, setHistoryToDate] = useState('');
+    const [historyPunchType, setHistoryPunchType] = useState<FilterPunchType>('ALL');
     const [mode, setMode] = useState<FormMode>(null);
     const [selectedPunchId, setSelectedPunchId] = useState<string | null>(null);
-    const [dateValue, setDateValue] = useState(defaultPunch ? toDateInputValue(defaultPunch.timestamp) : new Date().toISOString().slice(0, 10));
-    const [timeValue, setTimeValue] = useState(defaultPunch ? toTimeInputValue(defaultPunch.timestamp) : '08:00');
-    const [punchType, setPunchType] = useState<'IN' | 'OUT'>(defaultPunch?.punchType ?? 'IN');
+    const [dateValue, setDateValue] = useState(punches[0] ? toDateInputValue(punches[0].timestamp) : new Date().toISOString().slice(0, 10));
+    const [timeValue, setTimeValue] = useState(punches[0] ? toTimeInputValue(punches[0].timestamp) : '08:00');
+    const [punchType, setPunchType] = useState<'IN' | 'OUT'>(punches[0]?.punchType ?? 'IN');
     const [reason, setReason] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const userId = sortedPunches[0]?.userId ?? null;
+    const effectiveUserId = userId ?? history[0]?.userId ?? punches[0]?.userId ?? null;
+    const sortedPunches = useMemo(() => history, [history]);
+
+    const loadHistory = useCallback(async (mode: 'refresh' | 'more') => {
+        if (!effectiveUserId) {
+            return;
+        }
+
+        if (mode === 'more' && (!hasMore || loadingMore || loadingInitial)) {
+            return;
+        }
+
+        if (mode === 'refresh' && loadingMore) {
+            return;
+        }
+
+        if (mode === 'more') {
+            setLoadingMore(true);
+        } else if (history.length === 0) {
+            setLoadingInitial(true);
+        }
+
+        setError(null);
+
+        try {
+            const page = await adminApi.getEmployeePunchHistoryPage(
+                effectiveUserId,
+                PAGE_SIZE,
+                mode === 'more' ? nextCursor ?? undefined : undefined,
+                {
+                    fromDate: historyFromDate || undefined,
+                    toDate: historyToDate || undefined,
+                    punchType: historyPunchType === 'ALL' ? undefined : historyPunchType,
+                },
+            );
+
+            setHistory((current) => {
+                const merged = mode === 'more' ? mergePunches(current, page.items) : mergePunches([], page.items);
+                return trimPunches(merged);
+            });
+            setNextCursor(page.nextCursor);
+            setHasMore(page.hasMore);
+        } catch (err: any) {
+            setError(err.message ?? 'Failed to load punch history');
+        } finally {
+            setLoadingInitial(false);
+            setLoadingMore(false);
+        }
+    }, [effectiveUserId, hasMore, history.length, historyFromDate, historyPunchType, historyToDate, loadingInitial, loadingMore, nextCursor]);
 
     useEffect(() => {
         if (!open) {
             setMode(null);
             setSelectedPunchId(null);
             setError(null);
+            setHistory([]);
+            setNextCursor(null);
+            setHasMore(true);
+            setHistoryFromDate('');
+            setHistoryToDate('');
+            setHistoryPunchType('ALL');
             return;
         }
 
-        const firstPunch = sortedPunches[0] ?? null;
+        setHistory(trimPunches(mergePunches([], punches)));
+        setNextCursor(null);
+        setHasMore(true);
         setMode(null);
         setSelectedPunchId(null);
+        const firstPunch = mergePunches([], punches)[0] ?? null;
         setDateValue(firstPunch ? toDateInputValue(firstPunch.timestamp) : new Date().toISOString().slice(0, 10));
         setTimeValue(firstPunch ? toTimeInputValue(firstPunch.timestamp) : '08:00');
         setPunchType(firstPunch?.punchType ?? 'IN');
         setReason('');
         setError(null);
-    }, [open, sortedPunches]);
+    }, [open, userId]);
+
+    useEffect(() => {
+        if (!open || !effectiveUserId) return;
+        void loadHistory('refresh');
+    }, [open, effectiveUserId, historyFromDate, historyPunchType, historyToDate]);
 
     const startEdit = (punch: AttendancePunch) => {
         setMode('update');
@@ -101,13 +183,14 @@ export function HistoryModal({ open, punches, employeeCode, onClose, onSaved }: 
         setError(null);
         try {
             await adminApi.savePunchCorrection({
-                userId,
+                userId: effectiveUserId,
                 punchId: selectedPunchId ?? undefined,
                 timestamp: buildTimestamp(dateValue, timeValue),
                 punchType,
                 reason: reason.trim() || undefined,
                 isNew: mode === 'insert',
             });
+            await loadHistory('refresh');
             setMode(null);
             setSelectedPunchId(null);
             onSaved();
@@ -123,10 +206,42 @@ export function HistoryModal({ open, punches, employeeCode, onClose, onSaved }: 
             isOpen={open}
             onClose={onClose}
             title={employeeCode ? `Punch History — ${employeeCode}` : 'Punch History'}
-            description="Employee punch timeline from the selected table row."
+            description="Employee punch timeline with date and punch-type filters."
             className="sm:max-w-4xl lg:max-w-6xl"
         >
             <div className="space-y-4">
+                <div className="grid gap-3 rounded-3xl border border-[#f1f1f1] bg-[#fafafa] p-4 sm:grid-cols-3">
+                    <div>
+                        <label className="mb-1 block text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">From date</label>
+                        <input type="date" value={historyFromDate} onChange={(e) => setHistoryFromDate(e.target.value)} className="input-theme" />
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">To date</label>
+                        <input type="date" value={historyToDate} onChange={(e) => setHistoryToDate(e.target.value)} className="input-theme" />
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">Punch type</label>
+                        <select value={historyPunchType} onChange={(e) => setHistoryPunchType(e.target.value as FilterPunchType)} className="input-theme">
+                            <option value="ALL">All</option>
+                            <option value="IN">IN</option>
+                            <option value="OUT">OUT</option>
+                        </select>
+                    </div>
+                    <div className="sm:col-span-3 flex justify-end">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setHistoryFromDate('');
+                                setHistoryToDate('');
+                                setHistoryPunchType('ALL');
+                            }}
+                            className="rounded-full border border-[#e5e7eb] bg-white px-4 py-2 text-xs font-bold text-[#111111]"
+                        >
+                            Clear filters
+                        </button>
+                    </div>
+                </div>
+
                 <div className="flex flex-wrap gap-2">
                     <button type="button" onClick={startInsert} className="inline-flex items-center gap-2 rounded-full bg-[#111111] px-4 py-2 text-xs font-bold text-white">
                         <Plus className="h-3.5 w-3.5" />
@@ -158,12 +273,22 @@ export function HistoryModal({ open, punches, employeeCode, onClose, onSaved }: 
                     </div>
                 )}
 
-                {sortedPunches.length === 0 ? (
+                {loadingInitial && sortedPunches.length === 0 ? (
+                    <div className="rounded-3xl border border-dashed border-[#e5e7eb] bg-white px-4 py-10 text-center">
+                        <p className="text-sm font-medium text-[#6b7280]">Loading punch history...</p>
+                    </div>
+                ) : sortedPunches.length === 0 ? (
                     <div className="rounded-3xl border border-dashed border-[#e5e7eb] bg-white px-4 py-10 text-center">
                         <p className="text-sm font-medium text-[#6b7280]">No punches for this employee</p>
                     </div>
                 ) : (
-                    <div className="max-h-[calc(100dvh-17rem)] space-y-3 overflow-y-auto pr-1">
+                    <div ref={scrollRef} onScroll={(event) => {
+                        const element = event.currentTarget;
+                        const distanceFromBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
+                        if (distanceFromBottom < SCROLL_THRESHOLD_PX && hasMore && !loadingMore && !loadingInitial) {
+                            void loadHistory('more');
+                        }
+                    }} className="max-h-[calc(100dvh-17rem)] space-y-3 overflow-y-auto pr-1">
                         {sortedPunches.map((punch, index) => {
                             const isIn = punch.punchType === 'IN';
                             const Icon = isIn ? LogIn : LogOut;
@@ -275,6 +400,10 @@ export function HistoryModal({ open, punches, employeeCode, onClose, onSaved }: 
                         </div>
                     </div>
                 </Modal>
+
+                <div className="py-2 text-center text-xs text-[#9ca3af]">
+                    {loadingMore ? 'Loading more punches...' : hasMore ? 'Scroll for more' : 'No more punches to load'}
+                </div>
             </div>
         </Drawer>
     );

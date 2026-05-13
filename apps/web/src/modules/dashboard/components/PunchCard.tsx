@@ -227,44 +227,46 @@ export function PunchCard({
             transition={{ delay: 0.18, duration: 0.3 }}
             className="max-w-2xl rounded-3xl border border-[#f5f5f5] bg-[#fafafa] p-4"
           >
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#bbbbbb]">Punch History</p>
-                <p className="mt-1 text-xs text-[#6b7280]">Showing your 4 most recent punches. Tap View more to open the full punch timeline.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => dispatch({ type: 'OPEN_HISTORY' })}
-                className="cursor-pointer rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-xs font-bold text-[#111111] shadow-sm transition-colors hover:border-[#d1d5db] hover:bg-[#f9fafb] hover:text-[#6b7280]"
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  View more
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </span>
-              </button>
-            </div>
 
             {displayPunches.length > 0 ? (
-              <div className="space-y-1.5">
-                {displayPunches.map((p, i) => (
-                  <motion.div
-                    key={p.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 + i * 0.05, duration: 0.25 }}
-                    className="flex items-center gap-2.5 rounded-2xl bg-white px-3 py-2 shadow-[0_1px_0_rgba(15,23,42,0.03)]"
+              <>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.22em] text-[#bbbbbb]">Punch History</p>
+                    <p className="mt-1 text-xs text-[#6b7280]">Showing your 4 most recent punches. Tap View more to open the full punch timeline.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: 'OPEN_HISTORY' })}
+                    className="cursor-pointer rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-xs font-bold text-[#111111] shadow-sm transition-colors hover:border-[#d1d5db] hover:bg-[#f9fafb] hover:text-[#6b7280]"
                   >
-                    <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${p.punchType === 'IN' ? 'bg-emerald-50 text-emerald-600' : 'bg-[#f0f0f0] text-[#6b7280]'
-                      }`}>
-                      {p.punchType === 'IN' ? <LogIn className="h-3 w-3" /> : <LogOut className="h-3 w-3" />}
-                    </div>
-                    <span className="flex-1 text-xs text-[#6b7280]">Punch {p.punchType}</span>
-                    <span className="text-xs font-bold tabular-nums text-[#111111]">
-                      {new Date(p.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                    <span className="inline-flex items-center gap-1.5">
+                      View more
+                      <ChevronRight className="h-3.5 w-3.5" />
                     </span>
-                  </motion.div>
-                ))}
-              </div>
+                  </button>
+                </div>
+                <div className="space-y-1.5">
+                  {displayPunches.map((p, i) => (
+                    <motion.div
+                      key={p.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2 + i * 0.05, duration: 0.25 }}
+                      className="flex items-center gap-2.5 rounded-2xl bg-white px-3 py-2 shadow-[0_1px_0_rgba(15,23,42,0.03)]"
+                    >
+                      <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${p.punchType === 'IN' ? 'bg-emerald-50 text-emerald-600' : 'bg-[#f0f0f0] text-[#6b7280]'
+                        }`}>
+                        {p.punchType === 'IN' ? <LogIn className="h-3 w-3" /> : <LogOut className="h-3 w-3" />}
+                      </div>
+                      <span className="flex-1 text-xs text-[#6b7280]">Punch {p.punchType}</span>
+                      <span className="text-xs font-bold tabular-nums text-[#111111]">
+                        {new Date(p.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                      </span>
+                    </motion.div>
+                  ))}
+                </div>
+              </>
             ) : (
               <div className="rounded-2xl border border-dashed border-[#e5e7eb] bg-white px-4 py-6 text-sm text-[#9ca3af]">
                 No punches recorded yet today.

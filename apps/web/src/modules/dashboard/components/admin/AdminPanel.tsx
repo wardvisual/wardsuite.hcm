@@ -17,7 +17,7 @@ export function AdminPanel() {
         >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h2 className="text-base font-black text-[#111111]">Admin Panel</h2>
+                    <h2 className="text-base font-black text-[#111111]">Employee Punches</h2>
                     <p className="text-xs text-[#6b7280] mt-0.5">Manage attendance records and view company-wide reports.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2 rounded-3xl border border-[#ebebeb] bg-[#fafafa] p-2 shadow-sm sm:min-w-[19rem]">

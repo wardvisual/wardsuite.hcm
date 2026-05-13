@@ -3,7 +3,7 @@ import { DataTable, StatusBadge } from '@web/components';
 import type { Column } from '@web/components';
 import { formatHours, formatMinutes, formatTime, formatWeekRange } from '@web/lib/utils';
 import type { DailySummary, WeeklySummary } from '@web/modules/attendance';
-import { ReportDetailDrawer } from './ReportDetailDrawer';
+import { ReportDetailDrawer } from './ReportDetailDrawer.tsx';
 
 type ReportMode = 'daily' | 'weekly';
 
@@ -30,7 +30,7 @@ export function ReportTable({ mode, dailyData, weeklyData, loading, error, dateK
 
     useEffect(() => {
         setSelectedReport(null);
-    }, [mode]);
+    }, [mode, dateKey, weekKey]);
 
     const dailyColumns: Column<DailySummary>[] = [
         { key: 'emp', header: 'Employee', cell: (r) => <p className="font-black text-[#111111] text-sm">{r.employeeCode}</p> },
@@ -130,6 +130,8 @@ export function ReportTable({ mode, dailyData, weeklyData, loading, error, dateK
                 open={selectedReport !== null}
                 mode={mode}
                 report={selectedReport}
+                dateKey={dateKey}
+                weekKey={weekKey}
                 onClose={() => setSelectedReport(null)}
             />
         </div>

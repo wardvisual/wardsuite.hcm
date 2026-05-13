@@ -24,9 +24,10 @@ type PunchHistoryCache = {
 
 const punchHistoryCache = new Map<string, PunchHistoryCache>();
 
-function getCacheKey(timezone: string) {
-    const dateKey = new Date().toLocaleDateString('sv-SE', { timeZone: timezone }).slice(0, 10);
-    return `${timezone}_${dateKey}`;
+type FilterPunchType = 'ALL' | 'IN' | 'OUT';
+
+function getCacheKey(userId: string | null, timezone: string, fromDate: string, toDate: string, punchType: FilterPunchType) {
+    return `${userId ?? 'guest'}_${timezone}_${fromDate || 'all'}_${toDate || 'all'}_${punchType}`;
 }
 
 function mergePunches(current: AttendancePunch[], next: AttendancePunch[]) {
@@ -42,7 +43,11 @@ function trimPunches(punches: AttendancePunch[]) {
 export function PunchHistoryDrawer({ open, onClose }: PunchHistoryDrawerProps) {
     const { user } = useAuthStore();
     const timezone = user?.timezone ?? 'Asia/Manila';
-    const cacheKey = useMemo(() => getCacheKey(timezone), [timezone]);
+    const userId = user?.uid ?? user?.id ?? null;
+    const [historyFromDate, setHistoryFromDate] = useState('');
+    const [historyToDate, setHistoryToDate] = useState('');
+    const [historyPunchType, setHistoryPunchType] = useState<FilterPunchType>('ALL');
+    const cacheKey = useMemo(() => getCacheKey(userId, timezone, historyFromDate, historyToDate, historyPunchType), [historyFromDate, historyPunchType, historyToDate, timezone, userId]);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const [punches, setPunches] = useState<AttendancePunch[]>([]);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -60,6 +65,10 @@ export function PunchHistoryDrawer({ open, onClose }: PunchHistoryDrawerProps) {
     }, [cacheKey]);
 
     const loadPage = useCallback(async (mode: 'refresh' | 'more') => {
+        if (!userId) {
+            return;
+        }
+
         if (mode === 'more' && (!hasMore || loadingMore || loadingInitial)) {
             return;
         }
@@ -77,10 +86,14 @@ export function PunchHistoryDrawer({ open, onClose }: PunchHistoryDrawerProps) {
         setError(null);
 
         try {
-            const page = await attendanceApi.getTodayPunchesPage(
-                timezone,
+            const page = await attendanceApi.getPunchHistoryPage(
                 PAGE_SIZE,
                 mode === 'more' ? nextCursor ?? undefined : undefined,
+                {
+                    fromDate: historyFromDate || undefined,
+                    toDate: historyToDate || undefined,
+                    punchType: historyPunchType === 'ALL' ? undefined : historyPunchType,
+                },
             );
 
             setPunches((current) => {
@@ -97,10 +110,17 @@ export function PunchHistoryDrawer({ open, onClose }: PunchHistoryDrawerProps) {
             setLoadingInitial(false);
             setLoadingMore(false);
         }
-    }, [hasMore, loadingInitial, loadingMore, nextCursor, persistCache, punches.length, timezone]);
+    }, [hasMore, historyFromDate, historyPunchType, historyToDate, loadingInitial, loadingMore, nextCursor, punches.length, persistCache, timezone, userId]);
 
     useEffect(() => {
         if (!open) return;
+
+        if (!userId) {
+            setPunches([]);
+            setNextCursor(null);
+            setHasMore(false);
+            return;
+        }
 
         const cached = punchHistoryCache.get(cacheKey);
         if (cached) {
@@ -111,8 +131,12 @@ export function PunchHistoryDrawer({ open, onClose }: PunchHistoryDrawerProps) {
             return;
         }
 
+        setPunches([]);
+        setNextCursor(null);
+        setHasMore(true);
+
         void loadPage('refresh');
-    }, [cacheKey, loadPage, open]);
+    }, [cacheKey, loadPage, open, userId]);
 
     const sortedPunches = useMemo(() => punches, [punches]);
 
@@ -129,9 +153,41 @@ export function PunchHistoryDrawer({ open, onClose }: PunchHistoryDrawerProps) {
             isOpen={open}
             onClose={onClose}
             title="Punch History"
-            description="Employee view of the latest punch-in and punch-out events."
+            description="Employee punch history with date and punch-type filters."
         >
             <div className="space-y-4">
+                <div className="grid gap-3 rounded-3xl border border-[#f1f1f1] bg-[#fafafa] p-4 sm:grid-cols-3">
+                    <div>
+                        <label className="mb-1 block text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">From date</label>
+                        <input type="date" value={historyFromDate} onChange={(e) => setHistoryFromDate(e.target.value)} className="input-theme" />
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">To date</label>
+                        <input type="date" value={historyToDate} onChange={(e) => setHistoryToDate(e.target.value)} className="input-theme" />
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">Punch type</label>
+                        <select value={historyPunchType} onChange={(e) => setHistoryPunchType(e.target.value as FilterPunchType)} className="input-theme">
+                            <option value="ALL">All</option>
+                            <option value="IN">IN</option>
+                            <option value="OUT">OUT</option>
+                        </select>
+                    </div>
+                    <div className="sm:col-span-3 flex justify-end">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setHistoryFromDate('');
+                                setHistoryToDate('');
+                                setHistoryPunchType('ALL');
+                            }}
+                            className="rounded-full border border-[#e5e7eb] bg-white px-4 py-2 text-xs font-bold text-[#111111]"
+                        >
+                            Clear filters
+                        </button>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3 rounded-3xl border border-[#f1f1f1] bg-[#fafafa] p-4">
                     <div>
                         <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">Records</p>

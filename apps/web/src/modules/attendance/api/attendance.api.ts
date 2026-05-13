@@ -7,6 +7,18 @@ export interface AttendancePunchPage {
   hasMore: boolean;
 }
 
+export interface PunchHistoryFilters {
+  fromDate?: string;
+  toDate?: string;
+  punchType?: 'IN' | 'OUT';
+}
+
+function appendHistoryFilters(params: URLSearchParams, filters?: PunchHistoryFilters) {
+  if (filters?.fromDate) params.set('fromDate', filters.fromDate);
+  if (filters?.toDate) params.set('toDate', filters.toDate);
+  if (filters?.punchType) params.set('punchType', filters.punchType);
+}
+
 export const attendanceApi = {
   punch: (timezone?: string) =>
     apiRequest.post<AttendancePunch>('/attendance/punch', { timezone, source: 'web' }),
@@ -65,4 +77,18 @@ export const attendanceApi = {
 
   getAdminWeeklyReport: (weekKey: string) =>
     apiRequest.get<DailySummary[]>(`/attendance/admin/weekly-report?weekKey=${encodeURIComponent(weekKey)}`),
+
+  getPunchHistoryPage: (limit = 20, cursor?: string | null, filters?: PunchHistoryFilters) => {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) {
+      params.set('cursor', cursor);
+    }
+    appendHistoryFilters(params, filters);
+    return apiRequest.getResponse<AttendancePunch[]>(`/attendance/punch-history?${params.toString()}`)
+      .then((response) => ({
+        items: response.data,
+        nextCursor: (response.meta?.nextCursor as string | null) ?? null,
+        hasMore: Boolean(response.meta?.hasMore),
+      }) satisfies AttendancePunchPage);
+  },
 };

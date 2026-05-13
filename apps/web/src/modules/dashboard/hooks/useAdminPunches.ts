@@ -43,16 +43,6 @@ export function useAdminPunches() {
             const data = await adminApi.getTodayPunches('Asia/Manila');
             const nextPunches = Array.isArray(data) ? data : [];
             dispatchPunches({ type: 'SET_PUNCHES', punches: nextPunches });
-
-            const currentState = useDashboardStore.getState();
-            if (currentState.punches.historyTarget) {
-                const employeeCode = currentState.punches.historyTarget.employeeCode;
-                const refreshedHistory = nextPunches
-                    .filter((punch) => punch.employeeCode === employeeCode)
-                    .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime());
-
-                dispatchPunches({ type: 'SET_HISTORY', history: refreshedHistory });
-            }
         } catch (err: any) {
             dispatchPunches({ type: 'SET_ERROR', error: err.message ?? 'Failed to load punches' });
         } finally {

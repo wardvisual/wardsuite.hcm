@@ -37,6 +37,7 @@ export function AdminPunchesPanel() {
 
             <HistoryModal
                 open={!!punches.historyTarget}
+                userId={punches.historyTarget?.userId ?? null}
                 punches={punches.history}
                 employeeCode={punches.historyTarget?.employeeCode ?? null}
                 onClose={closeHistory}

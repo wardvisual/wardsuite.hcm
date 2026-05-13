@@ -11,6 +11,32 @@ export interface AdminPunchCorrectionPayload {
   isNew?: boolean;
 }
 
+export interface PunchHistoryFilters {
+  fromDate?: string;
+  toDate?: string;
+  punchType?: 'IN' | 'OUT';
+}
+
+export interface PunchHistoryDayGroup {
+  dateKey: string;
+  punches: AttendancePunch[];
+}
+
+export interface PunchHistoryGroupResponse {
+  userId: string;
+  employeeCode: string;
+  fromDate: string;
+  toDate: string;
+  totalPunches: number;
+  groups: PunchHistoryDayGroup[];
+}
+
+function appendHistoryFilters(params: URLSearchParams, filters?: PunchHistoryFilters) {
+  if (filters?.fromDate) params.set('fromDate', filters.fromDate);
+  if (filters?.toDate) params.set('toDate', filters.toDate);
+  if (filters?.punchType) params.set('punchType', filters.punchType);
+}
+
 export const adminApi = {
   getTodayPunches: (timezone = 'Asia/Manila', limit?: number) => {
     const params = new URLSearchParams({ timezone });
@@ -40,4 +66,26 @@ export const adminApi = {
 
   updateUser: (id: string, body: Record<string, unknown>) =>
     apiRequest.patch<unknown>(`/users/${id}`, body),
+
+  getEmployeePunchHistoryPage: (userId: string, limit = 20, cursor?: string | null, filters?: PunchHistoryFilters) => {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) {
+      params.set('cursor', cursor);
+    }
+    appendHistoryFilters(params, filters);
+    return apiRequest.getResponse<AttendancePunch[]>(`/attendance/admin/employees/${userId}/punch-history?${params.toString()}`)
+      .then((response) => ({
+        items: response.data,
+        nextCursor: (response.meta?.nextCursor as string | null) ?? null,
+        hasMore: Boolean(response.meta?.hasMore),
+      }));
+  },
+
+  getEmployeePunchHistoryGroups: (userId: string, fromDate: string, toDate: string, punchType?: 'IN' | 'OUT') => {
+    const params = new URLSearchParams({ fromDate, toDate });
+    if (punchType) {
+      params.set('punchType', punchType);
+    }
+    return apiRequest.get<PunchHistoryGroupResponse>(`/attendance/admin/employees/${userId}/punch-history/groups?${params.toString()}`);
+  },
 };
