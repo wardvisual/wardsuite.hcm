@@ -15,6 +15,7 @@
     "migrate:status": "npm run migrate:status --workspace=api",
     "seed": "npm run seed --workspace=api",
     "emulate": "npx firebase emulators:start",
+    "deploy:web": "npm run build:web && npm run firebase:deploy:hosting",
     "firebase:deploy:rules": "npx firebase deploy --only firestore:rules",
     "firebase:deploy:indexes": "npx firebase deploy --only firestore:indexes",
     "firebase:deploy:hosting": "npx firebase deploy --only hosting",
@@ -42,5 +43,8 @@
     "prettier": "^3.8.3",
     "tsx": "^4.21.0",
     "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "tsc": "^2.0.4"
   }
 }
