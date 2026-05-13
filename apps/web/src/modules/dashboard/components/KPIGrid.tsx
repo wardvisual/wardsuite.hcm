@@ -2,14 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Clock, TrendingUp, Moon, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { DailySummary, AttendancePunch } from '@web/modules/attendance';
-
-function fmtH(m: number): string { return `${(m / 60).toFixed(1)}h`; }
-function fmtMin(m: number): string {
-  if (m === 0) return '0m';
-  const h = Math.floor(m / 60);
-  const min = m % 60;
-  return h > 0 ? (min > 0 ? `${h}h ${min}m` : `${h}h`) : `${min}m`;
-}
+import { formatHours, formatMinutes } from '@web/lib/utils';
 
 function KPICard({ icon, label, value, sub, color, delay = 0 }: {
   icon: React.ReactNode; label: string; value: string; sub?: string; color: string; delay?: number;
@@ -52,15 +45,15 @@ export function KPIGrid({ todaySummary, todayPunches, isLoading }: KPIGridProps)
       <KPICard
         icon={<Clock className="w-5 h-5 text-[#111111]" />}
         label="Worked Today"
-        value={isLoading ? '—' : fmtH(worked)}
-        sub={`Regular: ${fmtH(regular)}`}
+        value={isLoading ? '—' : formatHours(worked)}
+        sub={`Regular: ${formatHours(regular)}`}
         color="bg-[#f5f5f5]"
         delay={0.05}
       />
       <KPICard
         icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
         label="Overtime"
-        value={isLoading ? '—' : fmtH(ot)}
+        value={isLoading ? '—' : formatHours(ot)}
         sub={ot > 0 ? 'Beyond shift' : 'None today'}
         color="bg-emerald-50"
         delay={0.1}
@@ -68,7 +61,7 @@ export function KPIGrid({ todaySummary, todayPunches, isLoading }: KPIGridProps)
       <KPICard
         icon={<Moon className="w-5 h-5 text-blue-600" />}
         label="Night Diff"
-        value={isLoading ? '—' : fmtH(nd)}
+        value={isLoading ? '—' : formatHours(nd)}
         sub="22:00 – 06:00"
         color="bg-blue-50"
         delay={0.15}
@@ -76,7 +69,7 @@ export function KPIGrid({ todaySummary, todayPunches, isLoading }: KPIGridProps)
       <KPICard
         icon={<AlertTriangle className="w-5 h-5 text-amber-600" />}
         label="Late / UT"
-        value={isLoading ? '—' : `${fmtMin(late)} / ${fmtMin(ut)}`}
+        value={isLoading ? '—' : `${formatMinutes(late)} / ${formatMinutes(ut)}`}
         sub={late === 0 && ut === 0 ? 'On time today!' : 'Deductions'}
         color="bg-amber-50"
         delay={0.2}

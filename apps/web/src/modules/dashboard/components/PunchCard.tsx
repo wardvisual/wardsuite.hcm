@@ -1,12 +1,9 @@
-import React from 'react';
+import React, { useReducer } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogIn, LogOut, Timer, Activity, AlertCircle } from 'lucide-react';
 import type { AttendancePunch, DailySummary } from '@web/modules/attendance';
-
-function fmtTime(iso: string | null): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-}
+import { formatTime } from '@web/lib/utils';
+import { PunchHistoryDrawer } from './PunchHistoryDrawer';
 
 function LiveClock() {
   const [time, setTime] = React.useState(new Date());
@@ -53,11 +50,10 @@ function PunchButton({ action, isPunching, isPunchedIn, onPunch }: PunchButtonPr
         whileHover={{ scale: 1.06 }}
         whileTap={{ scale: 0.93 }}
         transition={{ type: 'spring', stiffness: 380, damping: 18 }}
-        className={`relative z-10 w-28 h-28 rounded-full flex flex-col items-center justify-center gap-1.5 font-black text-white shadow-2xl disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-300 ${
-          isOut
-            ? 'bg-gradient-to-br from-[#111111] to-[#2a2a2a]'
-            : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
-        }`}
+        className={`relative z-10 w-28 h-28 rounded-full flex flex-col items-center justify-center gap-1.5 font-black text-white shadow-2xl disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-300 ${isOut
+          ? 'bg-gradient-to-br from-[#111111] to-[#2a2a2a]'
+          : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+          }`}
       >
         <AnimatePresence mode="wait">
           {isPunching ? (
@@ -102,6 +98,14 @@ interface PunchCardProps {
 export function PunchCard({
   todayPunches, todaySummary, isPunchedIn, nextAction, isPunching, error, onPunch,
 }: PunchCardProps) {
+  const [ui, dispatch] = useReducer(
+    (state: { historyOpen: boolean }, action: { type: 'OPEN_HISTORY' | 'CLOSE_HISTORY' }) => {
+      if (action.type === 'OPEN_HISTORY') return { historyOpen: true };
+      return { historyOpen: false };
+    },
+    { historyOpen: false },
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -118,11 +122,10 @@ export function PunchCard({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 4 }}
           transition={{ duration: 0.2 }}
-          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold ${
-            isPunchedIn
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-              : 'bg-[#f5f5f5] text-[#6b7280] border border-[#ebebeb]'
-          }`}
+          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold ${isPunchedIn
+            ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+            : 'bg-[#f5f5f5] text-[#6b7280] border border-[#ebebeb]'
+            }`}
         >
           <span className={`w-1.5 h-1.5 rounded-full ${isPunchedIn ? 'bg-emerald-500 animate-pulse' : 'bg-[#bbbbbb]'}`} />
           {isPunchedIn ? 'Currently Clocked In' : 'Not Clocked In'}
@@ -136,13 +139,13 @@ export function PunchCard({
           <div className="flex items-center gap-1.5">
             <Timer className="w-3.5 h-3.5 text-emerald-500" />
             <span className="font-bold">In:</span>
-            <span>{fmtTime(todaySummary.firstIn)}</span>
+            <span>{formatTime(todaySummary.firstIn)}</span>
           </div>
           {todaySummary.lastOut && (
             <div className="flex items-center gap-1.5">
               <Activity className="w-3.5 h-3.5 text-[#aaaaaa]" />
               <span className="font-bold">Out:</span>
-              <span>{fmtTime(todaySummary.lastOut)}</span>
+              <span>{formatTime(todaySummary.lastOut)}</span>
             </div>
           )}
         </div>
@@ -158,9 +161,8 @@ export function PunchCard({
               transition={{ delay: i * 0.05 }}
               className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-[#fafafa]"
             >
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                p.punchType === 'IN' ? 'bg-emerald-50 text-emerald-600' : 'bg-[#f0f0f0] text-[#6b7280]'
-              }`}>
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${p.punchType === 'IN' ? 'bg-emerald-50 text-emerald-600' : 'bg-[#f0f0f0] text-[#6b7280]'
+                }`}>
                 {p.punchType === 'IN' ? <LogIn className="w-3 h-3" /> : <LogOut className="w-3 h-3" />}
               </div>
               <span className="text-xs text-[#6b7280] flex-1">Punch {p.punchType}</span>
@@ -169,6 +171,13 @@ export function PunchCard({
               </span>
             </motion.div>
           ))}
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'OPEN_HISTORY' })}
+            className="text-xs font-bold text-[#111111] hover:text-[#6b7280] transition-colors"
+          >
+            View more
+          </button>
         </div>
       )}
 
@@ -182,6 +191,12 @@ export function PunchCard({
           {error}
         </motion.div>
       )}
+
+      <PunchHistoryDrawer
+        open={ui.historyOpen}
+        punches={todayPunches}
+        onClose={() => dispatch({ type: 'CLOSE_HISTORY' })}
+      />
     </motion.div>
   );
 }

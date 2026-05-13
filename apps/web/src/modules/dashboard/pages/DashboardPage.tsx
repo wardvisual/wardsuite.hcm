@@ -6,7 +6,8 @@ import { PunchCard } from '../components/PunchCard';
 import { KPIGrid } from '../components/KPIGrid';
 import { WeeklyChart } from '../components/WeeklyChart';
 import { AttendanceHistoryTable } from '../components/AttendanceHistoryTable';
-import { AdminPanel } from '../components/AdminPanel';
+import { AdminPanel } from '../components/admin';
+import { greeting, todayLabel } from '@web/lib/utils';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
@@ -18,26 +19,14 @@ export default function DashboardPage() {
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
-  const greeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
-  };
-
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric',
-  });
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="page-title">{greeting()}, {user?.name?.split(' ')[0] ?? 'there'}</h1>
-        <p className="page-subtitle">{today}</p>
+        <p className="page-subtitle">{todayLabel()}</p>
       </div>
 
-      {/* Punch card + KPIs */}
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-5">
+      <div className="space-y-6">
         <PunchCard
           todayPunches={todayPunches}
           todaySummary={todaySummary}
@@ -47,47 +36,53 @@ export default function DashboardPage() {
           error={error}
           onPunch={punch}
         />
+
         <KPIGrid
           todaySummary={todaySummary}
           todayPunches={todayPunches}
           isLoading={summaryLoading}
         />
-      </div>
 
-      {/* Weekly attendance chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.28 }}
-        className="floating-card p-6"
-      >
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-base font-black text-[#111111]">Weekly Attendance</h2>
-          <div className="flex items-center gap-3 text-xs text-[#bbbbbb]">
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-[#111111] inline-block" /> Regular
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-emerald-400 inline-block" /> OT
-            </span>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28 }}
+          className="floating-card p-6"
+        >
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-black text-[#111111]">Weekly Attendance</h2>
+              <p className="mt-1 text-xs text-[#6b7280]">Weekly regular time and overtime overview.</p>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-[#bbbbbb]">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-3 w-3 rounded-sm bg-[#111111]" /> Regular
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-3 w-3 rounded-sm bg-emerald-400" /> OT
+              </span>
+            </div>
           </div>
-        </div>
-        <WeeklyChart data={last7} />
-      </motion.div>
+          <WeeklyChart data={last7} />
+        </motion.div>
 
-      {/* Attendance history table */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.32 }}
-        className="floating-card p-6"
-      >
-        <h2 className="text-base font-black text-[#111111] mb-4">Attendance History</h2>
-        <AttendanceHistoryTable data={history} isLoading={historyLoading} />
-      </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.32 }}
+          className="floating-card p-6"
+        >
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-black text-[#111111]">Attendance History</h2>
+              <p className="mt-1 text-xs text-[#6b7280]">Recent computed summary for the employee timeline.</p>
+            </div>
+          </div>
+          <AttendanceHistoryTable data={history} isLoading={historyLoading} />
+        </motion.div>
 
-      {/* Admin panel — visible to ADMIN and MANAGER only */}
-      {isAdmin && <AdminPanel />}
+        {isAdmin && <AdminPanel />}
+      </div>
     </div>
   );
 }
