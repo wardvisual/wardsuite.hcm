@@ -30,15 +30,20 @@ export function getWeekKey(date: Date, timezone: string): string {
 
 export function computeWeekRange(weekKey: string): { start: string; end: string } {
   const [year, week] = weekKey.split('-W').map(Number);
-  const jan4 = new Date(year, 0, 4);
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const dayOfWeek = jan4.getUTCDay() || 7;
   const startOfWeek1 = new Date(jan4);
-  startOfWeek1.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1);
-  const monday = new Date(startOfWeek1);
-  monday.setDate(startOfWeek1.getDate() + (week - 1) * 7);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
+  startOfWeek1.setUTCDate(jan4.getUTCDate() - dayOfWeek + 1);
 
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const monday = new Date(startOfWeek1);
+  monday.setUTCDate(startOfWeek1.getUTCDate() + (week - 1) * 7);
+
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+
+  const fmt = (d: Date) =>
+    `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+
   return { start: fmt(monday), end: fmt(sunday) };
 }
 

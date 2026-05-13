@@ -42,6 +42,22 @@ export class AttendanceController {
     }
   };
 
+  getPunchHistoryPage = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const parsedLimit = Number(req.query.limit ?? 20);
+      const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 20;
+      const cursor = (req.query.cursor as string) ?? undefined;
+      const fromDate = (req.query.fromDate as string) ?? undefined;
+      const toDate = (req.query.toDate as string) ?? undefined;
+      const punchType = (req.query.punchType as 'IN' | 'OUT' | undefined) ?? undefined;
+      const page = await this.service.getPunchHistoryPage(userId, { limit, cursor, fromDate, toDate, punchType });
+      res.status(200).json(successWithMeta(page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore, limit }));
+    } catch (err: any) {
+      res.status(err.statusCode ?? 500).json(error(err.message));
+    }
+  };
+
   getEmployeePunchPage = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.params.userId as string;
@@ -50,6 +66,41 @@ export class AttendanceController {
       const cursor = (req.query.cursor as string) ?? undefined;
       const page = await this.service.getEmployeePunchPage(userId, limit, cursor);
       res.status(200).json(successWithMeta(page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore, limit }));
+    } catch (err: any) {
+      res.status(err.statusCode ?? 500).json(error(err.message));
+    }
+  };
+
+  getAdminEmployeePunchHistoryPage = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.params.userId as string;
+      const parsedLimit = Number(req.query.limit ?? 20);
+      const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 20;
+      const cursor = (req.query.cursor as string) ?? undefined;
+      const fromDate = (req.query.fromDate as string) ?? undefined;
+      const toDate = (req.query.toDate as string) ?? undefined;
+      const punchType = (req.query.punchType as 'IN' | 'OUT' | undefined) ?? undefined;
+      const page = await this.service.getPunchHistoryPage(userId, { limit, cursor, fromDate, toDate, punchType });
+      res.status(200).json(successWithMeta(page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore, limit }));
+    } catch (err: any) {
+      res.status(err.statusCode ?? 500).json(error(err.message));
+    }
+  };
+
+  getAdminEmployeePunchHistoryGroups = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.params.userId as string;
+      const fromDate = (req.query.fromDate as string) ?? '';
+      const toDate = (req.query.toDate as string) ?? '';
+      const punchType = (req.query.punchType as 'IN' | 'OUT' | undefined) ?? undefined;
+
+      if (!fromDate || !toDate) {
+        res.status(400).json(error('fromDate and toDate query params required (YYYY-MM-DD)'));
+        return;
+      }
+
+      const data = await this.service.getEmployeePunchHistoryGroups(userId, { fromDate, toDate, punchType });
+      res.status(200).json(success(data));
     } catch (err: any) {
       res.status(err.statusCode ?? 500).json(error(err.message));
     }

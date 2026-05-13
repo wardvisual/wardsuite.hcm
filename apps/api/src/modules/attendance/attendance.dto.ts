@@ -3,6 +3,20 @@ export interface PunchDto {
   source?: 'web' | 'mobile' | 'admin';
 }
 
+export interface PunchHistoryQuery {
+  limit?: number;
+  cursor?: string;
+  fromDate?: string;
+  toDate?: string;
+  punchType?: 'IN' | 'OUT';
+}
+
+export interface PunchHistoryGroupQuery {
+  fromDate: string;
+  toDate: string;
+  punchType?: 'IN' | 'OUT';
+}
+
 export interface AdminEditPunchDto {
   timestamp: string; // ISO string
   reason?: string;

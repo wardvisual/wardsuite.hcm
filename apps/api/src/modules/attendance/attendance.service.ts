@@ -14,7 +14,7 @@ import {
   User,
   HistoryAction,
 } from '@api/types';
-import { PunchDto, AdminEditPunchDto, AdminPunchCorrectionDto } from './attendance.dto';
+import { PunchDto, AdminEditPunchDto, AdminPunchCorrectionDto, PunchHistoryQuery, PunchHistoryGroupQuery } from './attendance.dto';
 
 export class AttendanceService {
   private db = getDb();
@@ -241,16 +241,62 @@ export class AttendanceService {
   }
 
   async getHistory(userId: string, limit = 30): Promise<DailySummary[]> {
-    const snap = await this.db
-      .collection('dailySummary')
-      .where('userId', '==', userId)
-      .orderBy('dateKey', 'desc')
-      .limit(limit)
-      .get();
+    const pageSize = Number.isFinite(limit) && limit > 0 ? limit : 30;
+    const batchSize = Math.max(pageSize * 5, 100);
+    const userDoc = await this.db.collection('users').doc(userId).get();
+    if (!userDoc.exists) throw Object.assign(new Error('User not found'), { statusCode: 404 });
+    const user = userDoc.data() as User;
 
-    return snap.docs
-      .filter((d) => d.id !== '_schema')
-      .map((d) => ({ id: d.id, ...d.data() }) as DailySummary);
+    const punchesByDate = new Map<string, AttendancePunch[]>();
+    const dateOrder: string[] = [];
+    let cursorSnap: FirebaseFirestore.DocumentSnapshot | null = null;
+    let hitOlderDate = false;
+
+    while (!hitOlderDate) {
+      let query = this.db.collection('attendance').orderBy('timestamp', 'desc').limit(batchSize);
+      if (cursorSnap) {
+        query = query.startAfter(cursorSnap);
+      }
+
+      const snap = await query.get();
+      const docs = snap.docs.filter((d) => d.id !== '_schema');
+      if (docs.length === 0) break;
+
+      for (const doc of docs) {
+        const punch = { id: doc.id, ...doc.data() } as AttendancePunch;
+        cursorSnap = doc;
+
+        if (punch.userId !== userId) {
+          continue;
+        }
+
+        if (!punchesByDate.has(punch.dateKey)) {
+          if (dateOrder.length >= pageSize) {
+            hitOlderDate = true;
+            break;
+          }
+          punchesByDate.set(punch.dateKey, []);
+          dateOrder.push(punch.dateKey);
+        }
+
+        punchesByDate.get(punch.dateKey)!.push(punch);
+      }
+
+      if (docs.length < batchSize) {
+        break;
+      }
+    }
+
+    const histories = dateOrder
+      .map((dateKey) => {
+        const punches = punchesByDate.get(dateKey) ?? [];
+        const summary = this.buildDailySummaryFromPunches(userId, user, dateKey, punches);
+        return summary;
+      })
+      .filter((summary): summary is DailySummary => summary !== null)
+      .sort((left, right) => right.dateKey.localeCompare(left.dateKey));
+
+    return histories.slice(0, pageSize);
   }
 
   async getAttendanceHistory(attendanceId: string): Promise<AttendanceHistory[]> {
@@ -263,6 +309,172 @@ export class AttendanceService {
     return snap.docs
       .filter((d) => d.id !== '_schema')
       .map((d) => ({ id: d.id, ...d.data() }) as AttendanceHistory);
+  }
+
+  async getEmployeePunchHistoryGroups(
+    userId: string,
+    query: PunchHistoryGroupQuery,
+  ): Promise<{
+    userId: string;
+    employeeCode: string;
+    fromDate: string;
+    toDate: string;
+    totalPunches: number;
+    groups: Array<{ dateKey: string; punches: AttendancePunch[] }>;
+  }> {
+    if (query.fromDate > query.toDate) {
+      throw Object.assign(new Error('fromDate must be before or equal to toDate'), { statusCode: 400 });
+    }
+
+    const userDoc = await this.db.collection('users').doc(userId).get();
+    if (!userDoc.exists) throw Object.assign(new Error('User not found'), { statusCode: 404 });
+    const user = userDoc.data() as User;
+
+    const batchSize = 200;
+    const punches: AttendancePunch[] = [];
+    let cursorSnap: FirebaseFirestore.DocumentSnapshot | null = null;
+    let hitBeforeRange = false;
+
+    while (!hitBeforeRange) {
+      let queryRef = this.db.collection('attendance').orderBy('timestamp', 'desc').limit(batchSize);
+      if (cursorSnap) {
+        queryRef = queryRef.startAfter(cursorSnap);
+      }
+
+      const snap = await queryRef.get();
+      const docs = snap.docs.filter((d) => d.id !== '_schema');
+      if (docs.length === 0) break;
+
+      for (const doc of docs) {
+        const punch = { id: doc.id, ...doc.data() } as AttendancePunch;
+        cursorSnap = doc;
+
+        if (punch.userId !== userId) {
+          continue;
+        }
+
+        if (punch.dateKey < query.fromDate) {
+          hitBeforeRange = true;
+          break;
+        }
+
+        if (punch.dateKey > query.toDate) {
+          continue;
+        }
+
+        if (query.punchType && punch.punchType !== query.punchType) {
+          continue;
+        }
+
+        punches.push(punch);
+      }
+
+      if (docs.length < batchSize) {
+        break;
+      }
+    }
+
+    const orderedPunches = punches.sort((left, right) => new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime());
+    const groupMap = new Map<string, AttendancePunch[]>();
+    const dayKeys = this.buildDateRangeKeys(query.fromDate, query.toDate);
+
+    for (const punch of orderedPunches) {
+      if (!groupMap.has(punch.dateKey)) {
+        groupMap.set(punch.dateKey, []);
+      }
+      groupMap.get(punch.dateKey)!.push(punch);
+    }
+
+    const groups = dayKeys.map((dateKey) => ({
+      dateKey,
+      punches: groupMap.get(dateKey) ?? [],
+    }));
+
+    return {
+      userId,
+      employeeCode: user.employeeCode,
+      fromDate: query.fromDate,
+      toDate: query.toDate,
+      totalPunches: orderedPunches.length,
+      groups,
+    };
+  }
+
+  async getPunchHistoryPage(
+    userId: string,
+    query: PunchHistoryQuery,
+  ): Promise<{ items: AttendancePunch[]; nextCursor: string | null; hasMore: boolean }> {
+    const pageSize = Number.isFinite(query.limit) && (query.limit ?? 0) > 0 ? (query.limit as number) : 20;
+    const batchSize = Math.max(pageSize * 5, 100);
+    const items: AttendancePunch[] = [];
+    let nextCursor = query.cursor ?? null;
+    let hasMore = false;
+    let cursorSnap: FirebaseFirestore.DocumentSnapshot | null = null;
+
+    if (query.cursor) {
+      const snap = await this.db.collection('attendance').doc(query.cursor).get();
+      if (!snap.exists) {
+        throw Object.assign(new Error('Cursor not found'), { statusCode: 400 });
+      }
+      cursorSnap = snap;
+    }
+
+    const punchType = query.punchType && (query.punchType === 'IN' || query.punchType === 'OUT') ? query.punchType : null;
+    const fromDate = query.fromDate ?? null;
+    const toDate = query.toDate ?? null;
+
+    if (fromDate && toDate && fromDate > toDate) {
+      throw Object.assign(new Error('fromDate must be before or equal to toDate'), { statusCode: 400 });
+    }
+
+    while (items.length <= pageSize) {
+      let queryRef = this.db.collection('attendance').orderBy('timestamp', 'desc').limit(batchSize);
+      if (cursorSnap) {
+        queryRef = queryRef.startAfter(cursorSnap);
+      }
+
+      const snap = await queryRef.get();
+      const docs = snap.docs.filter((d) => d.id !== '_schema');
+      if (docs.length === 0) break;
+
+      for (const doc of docs) {
+        const punch = { id: doc.id, ...doc.data() } as AttendancePunch;
+        cursorSnap = doc;
+        nextCursor = doc.id;
+
+        if (punch.userId !== userId) {
+          continue;
+        }
+
+        if (fromDate && punch.dateKey < fromDate) {
+          continue;
+        }
+
+        if (toDate && punch.dateKey > toDate) {
+          continue;
+        }
+
+        if (punchType && punch.punchType !== punchType) {
+          continue;
+        }
+
+        items.push(punch);
+        if (items.length > pageSize) {
+          hasMore = true;
+          break;
+        }
+      }
+
+      if (hasMore || docs.length < batchSize) {
+        break;
+      }
+    }
+
+    return {
+      items: items.slice(0, pageSize),
+      nextCursor: hasMore ? nextCursor : null,
+      hasMore,
+    };
   }
 
   async adminEditPunch(
@@ -640,6 +852,77 @@ export class AttendanceService {
 
     const count = snap.docs.filter((doc) => doc.id !== '_schema').length;
     return `${dateKey}_shift_${Math.floor(count / 2) + 1}`;
+  }
+
+  private buildDateRangeKeys(fromDate: string, toDate: string): string[] {
+    const keys: string[] = [];
+    const [fromYear, fromMonth, fromDay] = fromDate.split('-').map(Number);
+    const [toYear, toMonth, toDay] = toDate.split('-').map(Number);
+    const current = new Date(Date.UTC(fromYear, fromMonth - 1, fromDay));
+    const end = new Date(Date.UTC(toYear, toMonth - 1, toDay));
+
+    const formatDateKey = (date: Date): string =>
+      `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+
+    while (current <= end) {
+      keys.push(formatDateKey(current));
+      current.setUTCDate(current.getUTCDate() + 1);
+    }
+
+    return keys;
+  }
+
+  private buildDailySummaryFromPunches(
+    userId: string,
+    user: User,
+    dateKey: string,
+    punches: AttendancePunch[],
+  ): DailySummary | null {
+    if (punches.length === 0) {
+      return null;
+    }
+
+    const orderedPunches = [...punches].sort((left, right) => new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime());
+    const timezone = orderedPunches[0]?.timezone ?? user.timezone ?? 'Asia/Manila';
+    const firstInPunch = orderedPunches.find((punch) => punch.punchType === 'IN') ?? orderedPunches[0];
+    const outPunches = orderedPunches.filter((punch) => punch.punchType === 'OUT');
+    const lastOutPunch = outPunches.length > 0 ? outPunches[outPunches.length - 1] : null;
+    const firstIn = firstInPunch ? new Date(firstInPunch.timestamp) : null;
+    const lastOut = lastOutPunch ? new Date(lastOutPunch.timestamp) : null;
+
+    if (!firstIn) {
+      return null;
+    }
+
+    const schedule = user.schedule;
+    const scheduledMinutes = this.calcScheduledMinutes(schedule);
+    const computed = computeDaySummary(firstIn, lastOut, schedule, timezone);
+    const weekKey = orderedPunches[0]?.weekKey ?? getWeekKey(new Date(firstInPunch.timestamp), timezone);
+    const now = new Date().toISOString();
+
+    return {
+      id: `${userId}_${dateKey}`,
+      userId,
+      employeeCode: user.employeeCode,
+      dateKey,
+      weekKey,
+      timezone,
+      schedule: { ...schedule, scheduledMinutes },
+      firstIn: firstIn.toISOString(),
+      lastOut: lastOut?.toISOString() ?? null,
+      punchCount: orderedPunches.length,
+      punchIds: orderedPunches.map((punch) => punch.id),
+      workedMinutes: computed.workedMinutes,
+      regularMinutes: computed.regularMinutes,
+      overtimeMinutes: computed.overtimeMinutes,
+      nightDifferentialMinutes: computed.nightDifferentialMinutes,
+      lateMinutes: computed.lateMinutes,
+      undertimeMinutes: computed.undertimeMinutes,
+      status: computed.status,
+      computationVersion: 1,
+      computedAt: now,
+      updatedAt: now,
+    };
   }
 
   private async writeHistory(data: Omit<AttendanceHistory, 'id' | 'changedAt'>): Promise<void> {
