@@ -94,14 +94,19 @@ export class AttendanceService {
     return created;
   }
 
-  async getTodayPunches(userId: string, timezone: string): Promise<AttendancePunch[]> {
+  async getTodayPunches(userId: string, timezone: string, limit?: number): Promise<AttendancePunch[]> {
     const dateKey = getDateKey(new Date(), timezone);
-    const snap = await this.db
+    let query = this.db
       .collection('attendance')
       .where('userId', '==', userId)
       .where('dateKey', '==', dateKey)
-      .orderBy('timestamp', 'asc')
-      .get();
+      .orderBy('timestamp', 'desc');
+
+    if (Number.isFinite(limit) && limit && limit > 0) {
+      query = query.limit(limit);
+    }
+
+    const snap = await query.get();
 
     return snap.docs
       .filter((d) => d.id !== '_schema')

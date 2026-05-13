@@ -20,7 +20,8 @@ export class AttendanceController {
     try {
       const userId = req.user!.id;
       const timezone = (req.query.timezone as string) ?? 'Asia/Manila';
-      const data = await this.service.getTodayPunches(userId, timezone);
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+      const data = await this.service.getTodayPunches(userId, timezone, limit);
       res.status(200).json(success(data));
     } catch (err: any) {
       res.status(err.statusCode ?? 500).json(error(err.message));
