@@ -95,6 +95,17 @@ export class AttendanceService {
   }
 
   async getTodayPunches(userId: string, timezone: string, limit?: number): Promise<AttendancePunch[]> {
+    const page = await this.getTodayPunchPage(userId, timezone, limit);
+    return page.items;
+  }
+
+  async getTodayPunchPage(
+    userId: string,
+    timezone: string,
+    limit = 20,
+    cursor?: string,
+  ): Promise<{ items: AttendancePunch[]; nextCursor: string | null; hasMore: boolean }> {
+    const pageSize = Number.isFinite(limit) && limit > 0 ? limit : 20;
     const dateKey = getDateKey(new Date(), timezone);
     let query = this.db
       .collection('attendance')
@@ -102,15 +113,27 @@ export class AttendanceService {
       .where('dateKey', '==', dateKey)
       .orderBy('timestamp', 'desc');
 
-    if (Number.isFinite(limit) && limit && limit > 0) {
-      query = query.limit(limit);
+    if (cursor) {
+      const cursorSnap = await this.db.collection('attendance').doc(cursor).get();
+      if (!cursorSnap.exists) {
+        throw Object.assign(new Error('Cursor not found'), { statusCode: 400 });
+      }
+      query = query.startAfter(cursorSnap);
     }
 
-    const snap = await query.get();
+    query = query.limit(pageSize + 1);
 
-    return snap.docs
-      .filter((d) => d.id !== '_schema')
-      .map((d) => ({ id: d.id, ...d.data() }) as AttendancePunch);
+    const snap = await query.get();
+    const docs = snap.docs.filter((d) => d.id !== '_schema');
+    const hasMore = docs.length > pageSize;
+    const pageDocs = hasMore ? docs.slice(0, pageSize) : docs;
+    const items = pageDocs.map((d) => ({ id: d.id, ...d.data() }) as AttendancePunch);
+
+    return {
+      items,
+      nextCursor: hasMore && pageDocs.length > 0 ? pageDocs[pageDocs.length - 1].id : null,
+      hasMore,
+    };
   }
 
   async getDailySummary(userId: string, dateKey: string): Promise<DailySummary | null> {

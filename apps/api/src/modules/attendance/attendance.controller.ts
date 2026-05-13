@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { AttendanceService } from './attendance.service';
 import { AuthenticatedRequest, resolveActor } from '@api/core/middleware/auth.middleware';
-import { success, error } from '@api/core/utils/response.utils';
+import { success, successWithMeta, error } from '@api/core/utils/response.utils';
 
 export class AttendanceController {
   private service = new AttendanceService();
@@ -23,6 +23,20 @@ export class AttendanceController {
       const limit = req.query.limit ? Number(req.query.limit) : undefined;
       const data = await this.service.getTodayPunches(userId, timezone, limit);
       res.status(200).json(success(data));
+    } catch (err: any) {
+      res.status(err.statusCode ?? 500).json(error(err.message));
+    }
+  };
+
+  getTodayPunchPage = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const timezone = (req.query.timezone as string) ?? 'Asia/Manila';
+      const parsedLimit = Number(req.query.limit ?? 20);
+      const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 20;
+      const cursor = (req.query.cursor as string) ?? undefined;
+      const page = await this.service.getTodayPunchPage(userId, timezone, limit, cursor);
+      res.status(200).json(successWithMeta(page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore, limit }));
     } catch (err: any) {
       res.status(err.statusCode ?? 500).json(error(err.message));
     }

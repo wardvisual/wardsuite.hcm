@@ -10,6 +10,7 @@ router.post('/punch', requireAuth, (req, res) => controller.punch(req, res));
 
 // Employee — read own data
 router.get('/today', requireAuth, (req, res) => controller.getTodayPunches(req, res));
+router.get('/today/page', requireAuth, (req, res) => controller.getTodayPunchPage(req, res));
 router.get('/history', requireAuth, (req, res) => controller.getHistory(req, res));
 router.get('/daily-summary/:dateKey', requireAuth, (req, res) => controller.getDailySummary(req, res));
 router.get('/punches/:punchId/history', requireAuth, (req, res) => controller.getPunchHistory(req, res));
