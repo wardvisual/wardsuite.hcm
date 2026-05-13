@@ -14,7 +14,7 @@ export default function DashboardPage() {
   const { history, last7, historyLoading } = useDashboard();
   const {
     todayPunches, todaySummary, isPunchedIn, nextAction,
-    isPunching, error, summaryLoading, punch,
+    isPunching, error, summaryLoading, recentPunches, punch,
   } = useAttendance();
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
@@ -29,6 +29,7 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <PunchCard
           todayPunches={todayPunches}
+          recentPunches={recentPunches}
           todaySummary={todaySummary}
           isPunchedIn={isPunchedIn}
           nextAction={nextAction}

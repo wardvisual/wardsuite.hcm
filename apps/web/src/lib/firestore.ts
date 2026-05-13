@@ -70,7 +70,7 @@ export function useTodayPunches(userId: string | null, dateKey: string) {
       collection(firestore, 'attendance'),
       where('userId', '==', userId),
       where('dateKey', '==', dateKey),
-      orderBy('timestamp', 'asc'),
+      orderBy('timestamp', 'desc'),
     );
     try {
       const unsub = onSnapshot(
