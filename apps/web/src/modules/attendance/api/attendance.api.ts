@@ -1,5 +1,5 @@
 import { apiRequest } from '@web/services/api.service';
-import { AttendancePunch, DailySummary } from '../types/attendance.types';
+import { AttendancePunch, AttendanceHistory, DailySummary } from '../types/attendance.types';
 
 export const attendanceApi = {
   punch: (timezone?: string) =>
@@ -13,6 +13,9 @@ export const attendanceApi = {
 
   getHistory: (limit = 30) =>
     apiRequest.get<DailySummary[]>(`/attendance/history?limit=${limit}`),
+
+  getPunchHistory: (punchId: string) =>
+    apiRequest.get<AttendanceHistory[]>(`/attendance/punches/${punchId}/history`),
 
   adminEditPunch: (punchId: string, timestamp: string, reason?: string) =>
     apiRequest.patch<AttendancePunch>(`/attendance/punches/${punchId}`, { timestamp, reason }),

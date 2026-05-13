@@ -44,6 +44,12 @@ export function useAttendance() {
       // Optimistic update: immediately reflect new punch in store before Firestore catches up
       const current = useAttendanceStore.getState().todayPunches;
       setTodayPunches([...current, newPunch]);
+      if (newPunch.punchType === 'IN') {
+        const summary = useAttendanceStore.getState().todaySummary;
+        if (summary) {
+          setTodaySummary({ ...summary, lastOut: null, firstIn: newPunch.timestamp });
+        }
+      }
       // Fetch updated daily summary from API
       try {
         const summary = await attendanceApi.getDailySummary(dateKey);

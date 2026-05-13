@@ -1,5 +1,11 @@
 export type PunchType = 'IN' | 'OUT';
 export type DailySummaryStatus = 'present' | 'absent' | 'late' | 'half-day';
+export type HistoryAction =
+  | 'CREATE_PUNCH'
+  | 'UPDATE_PUNCH'
+  | 'DELETE_PUNCH'
+  | 'RECOMPUTE_DAY'
+  | 'MANUAL_ADJUSTMENT';
 
 export interface WeeklySummary {
   id: string;
@@ -68,4 +74,30 @@ export interface DailySummary {
   computationVersion: number;
   computedAt: string;
   updatedAt: string;
+}
+
+export interface AttendanceHistory {
+  id: string;
+  attendanceId: string;
+  userId: string;
+  employeeCode: string;
+  dateKey: string;
+  weekKey: string;
+  action: HistoryAction;
+  changedBy: string;
+  changedByRole: string;
+  reason: string | null;
+  before: Partial<AttendancePunch> | null;
+  after: Partial<AttendancePunch> | null;
+  summaryImpact: {
+    regularMinutesBefore: number;
+    regularMinutesAfter: number;
+    overtimeMinutesBefore: number;
+    overtimeMinutesAfter: number;
+    lateMinutesBefore: number;
+    lateMinutesAfter: number;
+    undertimeMinutesBefore: number;
+    undertimeMinutesAfter: number;
+  } | null;
+  changedAt: string;
 }
