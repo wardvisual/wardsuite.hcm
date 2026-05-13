@@ -15,7 +15,7 @@
     "@tailwindcss/vite": "^4.3.0",
     "@tanstack/react-table": "^8.21.3",
     "axios": "^1.16.0",
-    "firebase": "^11.10.0",
+    "firebase": "^12.13.0",
     "lucide-react": "^1.14.0",
     "motion": "^12.38.0",
     "react": "^19.2.6",
