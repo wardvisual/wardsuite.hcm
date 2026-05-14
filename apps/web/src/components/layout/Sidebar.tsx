@@ -103,17 +103,6 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           {employeeNav.map((item) => (
             <NavItem key={item.path} {...item} />
           ))}
-
-          {isAdmin && (
-            <>
-              <div className="pt-4 pb-2 px-4">
-                <p className="font-black text-[#bbbbbb] text-[10px] uppercase tracking-[0.3em]">Admin</p>
-              </div>
-              {adminNav.map((item) => (
-                <NavItem key={`${item.label}-${item.path}`} {...item} />
-              ))}
-            </>
-          )}
         </nav>
 
         <div className="space-y-1 mt-auto p-6">

@@ -38,27 +38,12 @@ export function Shell({ children }: ShellProps) {
           </button>
 
           {/* Center: greeting + today label */}
-          <div className="hidden md:flex flex-1 max-w-xl flex-col justify-center px-3 min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#bbbbbb]">
-              {greeting()}, {user?.name?.split(' ')[0] ?? 'there'}
-            </p>
-            <p className="mt-1 truncate text-sm font-bold text-[#111111]">{todayLabel()}</p>
-          </div>
+          <h1 className="text-lg font-black text-[#111111]">
+            Dashboard 🪟
+          </h1>
 
           {/* Right: notifications + user */}
           <div className="flex items-center gap-2 lg:gap-3 shrink-0 ml-auto">
-            {/* Notifications */}
-            <button
-              type="button"
-              title="Notifications"
-              className="relative p-2.5 hover:bg-[#f5f5f5] rounded-xl transition-all"
-            >
-              <Bell className="w-5 h-5 text-[#aaaaaa]" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-black rounded-full border-[1.5px] border-white" />
-            </button>
-
-            {/* Divider */}
-            <div className="w-px h-8 bg-[#f1f1f1] hidden sm:block" />
 
             {/* User chip */}
             <div className="flex items-center gap-3 pl-1">
