@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wardsuite-hcm-api
+    ports:
+      - "3001:3000"
+    environment:
+      # Firebase Admin SDK
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
+      FIREBASE_AUTH_URI: ${FIREBASE_AUTH_URI}
+      FIREBASE_TOKEN_URI: ${FIREBASE_TOKEN_URI}
+      
+      # API Configuration
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://hcm.wardvisual.com}
+      
+      # Optional: Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    
+    restart: unless-stopped
+    
+    # Optional: Add volume for logs
+    volumes:
+      - ./logs:/app/logs
+    
+    # Optional: Add resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+volumes:
+  logs:
