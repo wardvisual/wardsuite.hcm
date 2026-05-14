@@ -1,8 +1,9 @@
 import { motion } from 'motion/react';
-import { RefreshCw } from 'lucide-react';
+import { CalendarDays, RefreshCw } from 'lucide-react';
 import { useAdminPunches } from '@web/modules/dashboard/hooks/useAdminPunches';
 import { PunchTable } from './punches/PunchTable';
 import { HistoryModal } from './punches/HistoryModal';
+import { todayLabel } from '@web/lib/utils';
 
 export function AdminPunchesPanel() {
     const {
@@ -13,10 +14,18 @@ export function AdminPunchesPanel() {
         closeHistory,
     } = useAdminPunches();
 
+    console.log({ punches, groupedPunches })
+
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <p className="text-sm text-[#6b7280]">Edit or delete attendance punches and view audit trail.</p>
+                <div className="flex items-center gap-2">
+                    <p className="text-sm text-[#6b7280]">Showing today's punches </p>
+                    <span className="inline-flex items-center gap-2 rounded-full border border-[#f1f1f1] bg-[#fafafa] px-3 py-1.5 text-[11px] font-bold text-[#6b7280]">
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        {todayLabel()}
+                    </span>
+                </div>
                 <button type="button" onClick={fetchPunches} className="btn-secondary">
                     <RefreshCw className="w-4 h-4" />
                     Refresh

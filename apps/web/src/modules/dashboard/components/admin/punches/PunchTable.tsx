@@ -48,8 +48,10 @@ export function PunchTable({ punches, loading, onHistory }: PunchTableProps) {
         {
             key: 'actions', header: '', cell: (r) => (
                 <div className="flex items-center gap-2">
-                    <button type="button" title="View employee history" onClick={() => onHistory(r.punches)} className="p-2 rounded-xl hover:bg-[#f5f5f5] text-[#bbbbbb] hover:text-[#111111] transition-all">
-                        <History className="w-4 h-4" />
+                    <button
+                        className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-xs font-bold text-[#111111] transition-colors hover:border-[#d1d5db] hover:bg-[#f9fafb] flex gap-1 "
+                        type="button" title="View employee history" onClick={() => onHistory(r.punches)} >
+                        View <History className="w-4 h-4" />
                     </button>
                 </div>
             )
