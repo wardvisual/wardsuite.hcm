@@ -75,6 +75,7 @@ export interface ComputedDaySummary {
   scheduledMinutes: number;
 }
 
+// hours computation 
 export function computeDaySummary(
   firstIn: Date,
   lastOut: Date | null,
