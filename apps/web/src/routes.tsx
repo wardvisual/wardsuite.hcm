@@ -4,6 +4,7 @@ import { LoginPage, RegisterPage } from '@web/modules/auth';
 import { AttendancePage } from '@web/modules/attendance';
 import { DashboardPage } from '@web/modules/dashboard';
 import { LandingPage } from '@web/modules/Landing';
+import { SettingsPage } from '@web/modules/settings';
 
 export type RouteConfig = {
     path: string;
@@ -19,5 +20,6 @@ export const publicRoutes: RouteConfig[] = [
 export const protectedRoutes: RouteConfig[] = [
     { path: '/dashboard', element: <DashboardPage /> },
     { path: '/attendance', element: <AttendancePage /> },
+    { path: '/settings', element: <SettingsPage /> },
     { path: '*', element: <Navigate to="/dashboard" replace /> },
 ];
