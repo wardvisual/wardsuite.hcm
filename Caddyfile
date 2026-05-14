@@ -3,8 +3,8 @@ api.hcm.wardvisual.com:443 {
 	# Enable compression
 	encode gzip
 
-	# Reverse proxy to Node.js API (port 3001)
-	reverse_proxy wardsuite-hcm-api:3000 {
+	# Reverse proxy to API service in the same docker-compose network
+	reverse_proxy api:3000 {
 		# Keep alive
 		transport http {
 			keep_alive 30s
@@ -33,17 +33,4 @@ api.hcm.wardvisual.com:443 {
 		level info
 	}
 }
-
-# Health check endpoint
-health.hcm.wardvisual.com:443 {
-	reverse_proxy wardsuite-hcm-api:3000 {
-		transport http {
-			keep_alive 30s
-		}
-	}
-	
-	header {
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-	}
-}
-
+ 
