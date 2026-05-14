@@ -21,7 +21,8 @@ services:
     
     restart: unless-stopped
     networks:
-      - wardsuite-network  
+      wardsuite-network:
+        external: true
     
 volumes:
   logs:
