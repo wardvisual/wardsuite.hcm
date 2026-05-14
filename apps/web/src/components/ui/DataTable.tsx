@@ -57,7 +57,7 @@ const badgeVariants = {
 };
 export function StatusBadge({ label, variant }: StatusBadgeProps) {
   return (
-    <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border', badgeVariants[variant])}>
+    <span className={cn('inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-bold border', badgeVariants[variant])}>
       {label}
     </span>
   );
@@ -138,15 +138,15 @@ export function DataTable<TData>({
       )}
 
       <div className="border-[#f0f0f0] bg-white shadow-[0_4px_24px_rgba(0,0,0,0.04)] border rounded-[24px] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="border-collapse w-full text-left">
+        <div className="overflow-x-auto overscroll-x-contain">
+          <table className="w-full min-w-[720px] table-auto border-collapse text-left">
             <thead className="border-[#f1f1f1] bg-[#fafafa] border-b">
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => (
                     <th
                       key={header.id}
-                      className="px-6 py-4 font-black text-[#aaaaaa] text-[10px] uppercase tracking-[0.2em]"
+                      className="whitespace-nowrap px-4 py-4 text-[10px] font-black uppercase tracking-[0.18em] text-[#aaaaaa] sm:px-6"
                     >
                       {header.isPlaceholder
                         ? null
@@ -182,8 +182,10 @@ export function DataTable<TData>({
                       )}
                     >
                       {row.getVisibleCells().map(cell => (
-                        <td key={cell.id} className="px-6 py-3.5 text-sm">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        <td key={cell.id} className="max-w-[18rem] whitespace-nowrap px-4 py-3.5 text-sm sm:px-6">
+                          <div className="truncate">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </div>
                         </td>
                       ))}
                     </motion.tr>
@@ -205,15 +207,15 @@ export function DataTable<TData>({
         </div>
       </div>
 
-      <div className="flex sm:flex-row flex-col justify-between items-start sm:items-center gap-4 px-1">
-        <div className="flex items-center gap-3 text-[#6b7280] text-sm">
-          <span className="font-medium text-[12px]">
+      <div className="flex flex-col gap-4 px-1 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex w-full min-w-0 items-center justify-between gap-3 text-sm text-[#6b7280] sm:w-auto sm:justify-start">
+          <span className="whitespace-nowrap text-[12px] font-medium">
             {totalFiltered === 0
               ? 'No results'
               : `Showing ${startRow}–${endRow} of ${totalFiltered}`}
           </span>
           <select
-            className="border-[#f1f1f1] hover:border-[#e0e0e0] bg-white px-3 py-1.5 border rounded-xl font-bold text-[#111111] text-[11px] transition-colors cursor-pointer outline-none"
+            className="cursor-pointer whitespace-nowrap rounded-xl border border-[#f1f1f1] bg-white px-3 py-1.5 text-[11px] font-bold text-[#111111] outline-none transition-colors hover:border-[#e0e0e0]"
             value={pageSize}
             onChange={e => {
               const newSize = Number(e.target.value);
@@ -227,13 +229,13 @@ export function DataTable<TData>({
           </select>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex max-w-full items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
           <button
             type="button"
             title="Previous page"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className="border-[#f1f1f1] hover:bg-gray-50 disabled:opacity-40 p-2 border rounded-xl transition-colors"
+            className="shrink-0 rounded-xl border border-[#f1f1f1] p-2 transition-colors hover:bg-gray-50 disabled:opacity-40"
           >
             <ChevronLeft className="w-4 h-4" aria-hidden="true" />
           </button>
@@ -247,7 +249,7 @@ export function DataTable<TData>({
                 type="button"
                 onClick={() => table.setPageIndex(p as number)}
                 className={cn(
-                  'w-9 h-9 rounded-xl text-sm font-bold transition-all',
+                  'h-9 w-9 shrink-0 rounded-xl text-sm font-bold transition-all',
                   p === pageIndex
                     ? 'bg-black text-white shadow-sm'
                     : 'border border-[#f1f1f1] text-[#6b7280] hover:bg-gray-50 hover:border-[#e0e0e0]'
@@ -263,7 +265,7 @@ export function DataTable<TData>({
             title="Next page"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="border-[#f1f1f1] hover:bg-gray-50 disabled:opacity-40 p-2 border rounded-xl transition-colors"
+            className="shrink-0 rounded-xl border border-[#f1f1f1] p-2 transition-colors hover:bg-gray-50 disabled:opacity-40"
           >
             <ChevronRight className="w-4 h-4" aria-hidden="true" />
           </button>
