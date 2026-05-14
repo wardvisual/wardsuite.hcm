@@ -7,31 +7,41 @@
     "dev": "concurrently -n \"API,WEB\" -c \"cyan,magenta\" \"npm run dev:api\" \"npm run dev:web\"",
     "dev:api": "npm run dev --workspace=api",
     "dev:web": "npm run dev --workspace=web",
+    "emulate": "npx firebase emulators:start",
+
     "build": "npm run build --workspace=api && npm run build --workspace=web",
     "build:api": "npm run build --workspace=api",
     "build:web": "npm run build --workspace=web",
-    "typecheck": "npm run typecheck --workspace=api && tsc -p apps/web --noEmit",
-    "migrate": "npm run migrate --workspace=api",
-    "migrate:status": "npm run migrate:status --workspace=api",
-    "seed": "npm run seed --workspace=api",
-    "emulate": "npx firebase emulators:start",
-    "deploy:web": "npm run build:web && npm run firebase:deploy:hosting",
-    "firebase:deploy:rules": "npx firebase deploy --only firestore:rules",
-    "firebase:deploy:indexes": "npx firebase deploy --only firestore:indexes",
-    "firebase:deploy:hosting": "npx firebase deploy --only hosting",
+
+    "check": "npm run typecheck && npm run lint && npm run format:check",
+    "typecheck": "npm run typecheck:api && npm run typecheck:web",
+    "typecheck:api": "npm run typecheck --workspace=api",
+    "typecheck:web": "npm run typecheck --workspace=web",
     "lint": "eslint \"apps/**/src/**/*.{ts,tsx}\"",
     "lint:fix": "eslint \"apps/**/src/**/*.{ts,tsx}\" --fix",
     "format": "prettier --write \"apps/**/*.{ts,tsx,json,css}\"",
     "format:check": "prettier --check \"apps/**/*.{ts,tsx,json,css}\"",
-    "clean": "rimraf apps/api/dist apps/web/dist",
+
+    "migrate": "npm run migrate --workspace=api",
+    "migrate:status": "npm run migrate:status --workspace=api",
+    "seed": "npm run seed --workspace=api",
+
+    "firebase:deploy:rules": "npx firebase deploy --only firestore:rules",
+    "firebase:deploy:indexes": "npx firebase deploy --only firestore:indexes",
+    "firebase:deploy:hosting": "npx firebase deploy --only hosting",
+
+    "deploy": "docker-compose up -d --build --force-recreate --remove-orphans",
+    "deploy:web": "cross-env VITE_API_BASE_URL=https://hcmapi.wardvisual.com/api npm run build:web && npm run firebase:deploy:hosting",
+    "deploy:logs": "docker-compose logs -f",
+    "deploy:stop": "docker-compose down --remove-orphans",
+
     "docker:build": "docker build -t wardsuite-hcm .",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f api",
     "docker:restart": "docker-compose restart api",
-    "deploy": "docker-compose up -d --build --force-recreate --remove-orphans",
-    "deploy:logs": "docker-compose logs -f",
-    "deploy:stop": "docker-compose down --remove-orphans"
+
+    "clean": "rimraf apps/api/dist apps/web/dist"
   },
   "keywords": [
     "hcm",
@@ -44,6 +54,7 @@
   "devDependencies": {
     "@types/firebase": "^2.4.32",
     "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
