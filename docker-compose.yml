@@ -16,11 +16,11 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
     restart: unless-stopped
     networks:
-      - wardsuite-network
+      - wardsuite_default
 
 volumes:
   logs:
 
 networks:
-  wardsuite-network:
+  wardsuite_default:
     external: true
