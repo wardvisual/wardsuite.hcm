@@ -1,36 +1,10 @@
-# Caddyfile for WardSuite HCM API
-api.hcm.wardvisual.com:443 {
-	# Enable compression
-	encode gzip
-
-	# Reverse proxy to API service in the same docker-compose network
-	reverse_proxy api:3000 {
-		# Keep alive
-		transport http {
-			keep_alive 30s
-		}
-	}
-
-	# Security headers
-	header {
-		# Prevent MIME type sniffing
-		X-Content-Type-Options "nosniff"
-		# Enable XSS protection
-		X-XSS-Protection "1; mode=block"
-		# Disable framing
-		X-Frame-Options "SAMEORIGIN"
-		# HSTS
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-	}
-
-	# Access logs
-	log {
-		output file /data/logs/api-hcm.log {
-			roll_size 100mb
-			roll_keep 10
-			roll_keep_for 7200h
-		}
-		level info
-	}
+hcmapi.wardvisual.com {
+    encode gzip
+    reverse_proxy wardsuite-hcm-api:3000
+    header {
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        X-Frame-Options "SAMEORIGIN"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    }
 }
- 
