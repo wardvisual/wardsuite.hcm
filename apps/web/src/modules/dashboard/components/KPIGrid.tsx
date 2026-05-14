@@ -75,34 +75,6 @@ export function KPIGrid({ todaySummary, todayPunches, isLoading }: KPIGridProps)
         delay={0.2}
       />
 
-      {todaySummary && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="col-span-2 floating-card p-4 flex flex-wrap items-center gap-4"
-        >
-          <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-            <div>
-              <p className="section-label">Today's Status</p>
-              <p className="text-sm font-black text-[#111111] capitalize">{todaySummary.status}</p>
-            </div>
-          </div>
-          <div className="h-6 w-px bg-[#f1f1f1] hidden sm:block" />
-          <div>
-            <p className="section-label">Punches Today</p>
-            <p className="text-sm font-black text-[#111111]">{todayPunches.length}</p>
-          </div>
-          <div className="h-6 w-px bg-[#f1f1f1] hidden sm:block" />
-          <div>
-            <p className="section-label">Schedule</p>
-            <p className="text-sm font-black text-[#111111]">
-              {todaySummary.schedule.start} – {todaySummary.schedule.end}
-            </p>
-          </div>
-        </motion.div>
-      )}
     </div>
   );
 }

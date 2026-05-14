@@ -1,6 +1,6 @@
 import React, { useReducer, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, LogIn, LogOut, Timer, Activity, AlertCircle } from 'lucide-react';
+import { ChevronRight, LogIn, LogOut, Timer, Activity, AlertCircle, Circle } from 'lucide-react';
 import type { AttendancePunch, DailySummary } from '@web/modules/attendance';
 import { formatTime } from '@web/lib/utils';
 import { PunchHistoryDrawer } from './PunchHistoryDrawer';
@@ -140,17 +140,17 @@ export function PunchCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="floating-card p-7"
+      className="floating-card p-5 sm:p-7"
     >
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:items-center">
+      <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:items-center">
         <motion.div
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.05, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="order-2 min-w-0 space-y-4 lg:order-1"
+          className="order-2 min-w-0 space-y-5 lg:order-1"
         >
           <div className="space-y-2">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <motion.span
                 animate={{ scale: isPunchedIn ? [1, 1.08, 1] : 1 }}
                 transition={{ duration: 1.8, repeat: isPunchedIn ? Infinity : 0, ease: 'easeInOut' }}
@@ -177,7 +177,8 @@ export function PunchCard({
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08, duration: 0.3 }}
-              className="text-2xl font-black tracking-tight text-[#111111] sm:text-3xl"
+              className={`text-2xl w-max font-black tracking-tight text-[#111111] sm:text-3xl ${isPunchedIn ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
+                : 'border-[#ebebeb] bg-[#f5f5f5] text-[#6b7280]'}`}
             >
               {isPunchedIn ? 'You are currently clocked in' : 'Ready to start your shift?'}
             </motion.h2>
@@ -273,6 +274,27 @@ export function PunchCard({
               </div>
             )}
           </motion.div>
+
+          <div className="grid max-w-2xl gap-2 rounded-3xl border border-[#f1f1f1] bg-white p-3 sm:grid-cols-2">
+            <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 px-3 py-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
+                <LogIn className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="whitespace-nowrap text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">Punch In</p>
+                <p className="truncate text-xs text-emerald-700/80">Start or resume tracked time</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-2xl bg-[#f5f5f5] px-3 py-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#111111] text-white">
+                <LogOut className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="whitespace-nowrap text-[11px] font-black uppercase tracking-[0.16em] text-[#111111]">Punch Out</p>
+                <p className="truncate text-xs text-[#6b7280]">End the active shift window</p>
+              </div>
+            </div>
+          </div>
         </motion.div>
 
         <motion.div
@@ -284,8 +306,12 @@ export function PunchCard({
           <motion.div
             animate={punchImpact ? { scale: [1, 0.92, 1.06, 1], rotate: [0, -2, 2, 0] } : { scale: 1 }}
             transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
-            className="relative flex h-full w-full items-center justify-center"
+            className="relative flex h-full w-full items-center justify-center py-3"
           >
+            <div className="absolute top-0 right-0 hidden items-center gap-2 rounded-full border border-[#f1f1f1] bg-white px-3 py-1.5 text-[11px] font-bold text-[#6b7280] shadow-sm lg:flex">
+              <Circle className={`h-2.5 w-2.5 fill-current ${nextAction === 'IN' ? 'text-emerald-500' : 'text-[#111111]'}`} />
+              Next: {nextAction === 'IN' ? 'Punch In' : 'Punch Out'}
+            </div>
             {punchImpact && (
               <motion.div
                 initial={{ opacity: 0.9, scale: 0.55 }}
