@@ -1,7 +1,9 @@
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, LogIn, LogOut, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Clock, LogIn, LogOut, AlertCircle, History } from 'lucide-react';
 import { useAttendance } from '../hooks/useAttendance';
 import { AttendancePunch } from '../types/attendance.types';
+import { AttendanceHistoryTable } from '@web/modules/dashboard/components/AttendanceHistoryTable';
 
 function fmt(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-US', {
@@ -29,7 +31,7 @@ function PunchTimeline({ punches }: { punches: AttendancePunch[] }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 max-h-[400px] overflow-auto">
       {punches.map((punch, i) => (
         <motion.div
           key={punch.id}
@@ -39,11 +41,10 @@ function PunchTimeline({ punches }: { punches: AttendancePunch[] }) {
           className="flex items-center gap-4 px-4 py-3 rounded-2xl bg-[#fafafa] hover:bg-[#f5f5f5] transition-colors"
         >
           <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-              punch.punchType === 'IN'
-                ? 'bg-emerald-50 text-emerald-600'
-                : 'bg-[#f5f5f5] text-[#6b7280]'
-            }`}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${punch.punchType === 'IN'
+              ? 'bg-emerald-50 text-emerald-600'
+              : 'bg-[#f5f5f5] text-[#6b7280]'
+              }`}
           >
             {punch.punchType === 'IN' ? (
               <LogIn className="w-4 h-4" />
@@ -52,20 +53,17 @@ function PunchTimeline({ punches }: { punches: AttendancePunch[] }) {
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-black text-[#111111]">
-              Punch {punch.punchType}
-            </p>
+            <p className="text-sm font-black text-[#111111]">Punch {punch.punchType}</p>
             <p className="text-xs text-[#bbbbbb]">
               {fmt(punch.timestamp)}
               {punch.isEdited && ' · edited'}
             </p>
           </div>
           <span
-            className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-              punch.punchType === 'IN'
-                ? 'bg-emerald-50 text-emerald-700'
-                : 'bg-[#f5f5f5] text-[#6b7280]'
-            }`}
+            className={`text-xs font-bold px-2.5 py-1 rounded-full ${punch.punchType === 'IN'
+              ? 'bg-emerald-50 text-emerald-700'
+              : 'bg-[#f5f5f5] text-[#6b7280]'
+              }`}
           >
             {punch.punchType}
           </span>
@@ -85,7 +83,14 @@ export default function AttendancePage() {
     error,
     dateKey,
     punch,
+    history,
+    historyLoading,
+    fetchHistory,
   } = useAttendance();
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -95,87 +100,106 @@ export default function AttendancePage() {
   });
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-black text-[#111111]">Time & Attendance</h1>
         <p className="text-sm text-[#6b7280] mt-0.5">{today}</p>
       </div>
 
-      {/* Punch button card */}
-      <div className="floating-card p-8 sm:p-12 flex flex-col items-center gap-6">
-        {/* Live clock */}
-        <LiveClock />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        {/* Left: punch card */}
+        <div className="space-y-5">
+          {/* Punch button card */}
+          <div className="floating-card p-8 sm:p-10 flex flex-col items-center gap-6">
+            <LiveClock />
 
-        {/* Status pill */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={String(isPunchedIn)}
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            transition={{ duration: 0.2 }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${
-              isPunchedIn
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                : 'bg-[#f5f5f5] text-[#6b7280] border border-[#ebebeb]'
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${isPunchedIn ? 'bg-emerald-500 animate-pulse' : 'bg-[#bbbbbb]'}`}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={String(isPunchedIn)}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                transition={{ duration: 0.2 }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${isPunchedIn
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                  : 'bg-[#f5f5f5] text-[#6b7280] border border-[#ebebeb]'
+                  }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${isPunchedIn ? 'bg-emerald-500 animate-pulse' : 'bg-[#bbbbbb]'}`}
+                />
+                {isPunchedIn ? 'Currently Clocked In' : 'Not Clocked In'}
+              </motion.div>
+            </AnimatePresence>
+
+            <PunchButton
+              action={nextAction}
+              isPunching={isPunching}
+              isPunchedIn={isPunchedIn}
+              onPunch={punch}
             />
-            {isPunchedIn ? 'Currently Clocked In' : 'Not Clocked In'}
-          </motion.div>
-        </AnimatePresence>
 
-        {/* The big punch button */}
-        <PunchButton
-          action={nextAction}
-          isPunching={isPunching}
-          isPunchedIn={isPunchedIn}
-          onPunch={punch}
-        />
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-2xl px-4 py-3 w-full"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {error}
+              </motion.div>
+            )}
+          </div>
 
-        {/* Error */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-2xl px-4 py-3 w-full"
-          >
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            {error}
-          </motion.div>
-        )}
+          {/* Today's metrics */}
+          {todaySummary && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+            >
+              <MetricCard label="Worked" value={fmtMinutes(todaySummary.workedMinutes)} />
+              <MetricCard label="Regular" value={fmtMinutes(todaySummary.regularMinutes)} />
+              <MetricCard
+                label="Overtime"
+                value={fmtMinutes(todaySummary.overtimeMinutes)}
+                highlight={todaySummary.overtimeMinutes > 0}
+              />
+              <MetricCard
+                label="Late"
+                value={fmtMinutes(todaySummary.lateMinutes)}
+                danger={todaySummary.lateMinutes > 0}
+              />
+            </motion.div>
+          )}
+        </div>
+
+        {/* Right: today's timeline */}
+        <div className="floating-card p-6">
+          <h2 className="text-base font-black text-[#111111] mb-4">Today's Timeline</h2>
+          <PunchTimeline punches={todayPunches} />
+        </div>
       </div>
 
-      {/* Today's metrics */}
-      {todaySummary && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3"
-        >
-          <MetricCard label="Worked" value={fmtMinutes(todaySummary.workedMinutes)} />
-          <MetricCard label="Regular" value={fmtMinutes(todaySummary.regularMinutes)} />
-          <MetricCard
-            label="Overtime"
-            value={fmtMinutes(todaySummary.overtimeMinutes)}
-            highlight={todaySummary.overtimeMinutes > 0}
-          />
-          <MetricCard
-            label="Late"
-            value={fmtMinutes(todaySummary.lateMinutes)}
-            danger={todaySummary.lateMinutes > 0}
-          />
-        </motion.div>
-      )}
-
-      {/* Timeline */}
-      <div className="floating-card p-6">
-        <h2 className="text-base font-black text-[#111111] mb-4">Today's Timeline</h2>
-        <PunchTimeline punches={todayPunches} />
-      </div>
+      {/* Attendance history */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="floating-card p-6"
+      >
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#f5f5f5]">
+            <History className="h-4 w-4 text-[#6b7280]" />
+          </div>
+          <div>
+            <h2 className="text-base font-black text-[#111111]">Attendance History</h2>
+            <p className="text-xs text-[#6b7280]">Last 30 days of daily summaries.</p>
+          </div>
+        </div>
+        <AttendanceHistoryTable data={history} isLoading={historyLoading} />
+      </motion.div>
     </div>
   );
 }
@@ -209,7 +233,6 @@ function PunchButton({ action, isPunching, isPunchedIn, onPunch }: PunchButtonPr
 
   return (
     <motion.div className="relative flex items-center justify-center" whileTap={{ scale: 0.96 }}>
-      {/* Pulse rings when punched in */}
       {isPunchedIn && (
         <>
           <motion.div
@@ -232,11 +255,10 @@ function PunchButton({ action, isPunching, isPunchedIn, onPunch }: PunchButtonPr
         whileHover={{ scale: 1.04 }}
         whileTap={{ scale: 0.94 }}
         transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-        className={`relative z-10 w-32 h-32 rounded-full flex flex-col items-center justify-center gap-1 font-black text-white shadow-xl disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-300 ${
-          isOut
-            ? 'bg-gradient-to-br from-[#111111] to-[#333333]'
-            : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
-        }`}
+        className={`relative z-10 w-32 h-32 rounded-full flex flex-col items-center justify-center gap-1 font-black text-white shadow-xl disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-300 ${isOut
+          ? 'bg-gradient-to-br from-[#111111] to-[#333333]'
+          : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+          }`}
       >
         <AnimatePresence mode="wait">
           {isPunching ? (
@@ -256,11 +278,7 @@ function PunchButton({ action, isPunching, isPunchedIn, onPunch }: PunchButtonPr
               transition={{ type: 'spring', stiffness: 500, damping: 25 }}
               className="flex flex-col items-center gap-1"
             >
-              {isOut ? (
-                <LogOut className="w-6 h-6" />
-              ) : (
-                <LogIn className="w-6 h-6" />
-              )}
+              {isOut ? <LogOut className="w-6 h-6" /> : <LogIn className="w-6 h-6" />}
               <span className="text-xs tracking-widest uppercase">
                 {isOut ? 'Punch Out' : 'Punch In'}
               </span>
@@ -268,7 +286,6 @@ function PunchButton({ action, isPunching, isPunchedIn, onPunch }: PunchButtonPr
           )}
         </AnimatePresence>
 
-        {/* Success ripple */}
         <AnimatePresence>
           {!isPunching && (
             <motion.div
@@ -295,22 +312,25 @@ interface MetricCardProps {
 function MetricCard({ label, value, highlight, danger }: MetricCardProps) {
   return (
     <div
-      className={`rounded-2xl p-4 border ${
-        danger
-          ? 'bg-red-50 border-red-100'
-          : highlight
+      className={`rounded-2xl p-4 border ${danger
+        ? 'bg-red-50 border-red-100'
+        : highlight
           ? 'bg-emerald-50 border-emerald-100'
           : 'bg-[#fafafa] border-[#f1f1f1]'
-      }`}
+        }`}
     >
-      <p className={`text-xs font-black uppercase tracking-wider mb-1 ${danger ? 'text-red-400' : highlight ? 'text-emerald-600' : 'text-[#bbbbbb]'}`}>
+      <p
+        className={`text-xs font-black uppercase tracking-wider mb-1 ${danger ? 'text-red-400' : highlight ? 'text-emerald-600' : 'text-[#bbbbbb]'
+          }`}
+      >
         {label}
       </p>
-      <p className={`text-xl font-black ${danger ? 'text-red-700' : highlight ? 'text-emerald-700' : 'text-[#111111]'}`}>
+      <p
+        className={`text-xl font-black ${danger ? 'text-red-700' : highlight ? 'text-emerald-700' : 'text-[#111111]'
+          }`}
+      >
         {value}
       </p>
     </div>
   );
 }
-
-import React from 'react';

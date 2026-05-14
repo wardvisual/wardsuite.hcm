@@ -20,8 +20,9 @@ export function useAttendance() {
   const [loading, setLoading] = useState(true);
   const {
     todayPunches, todaySummary, isPunching, error,
+    history, historyLoading,
     setTodayPunches, setTodaySummary, upsertHistorySummary,
-    setPunching, setError,
+    setPunching, setError, setHistory, setHistoryLoading,
   } = useAttendanceStore();
 
   const timezone = user?.timezone ?? 'Asia/Manila';
@@ -74,6 +75,18 @@ export function useAttendance() {
       cancelled = true;
     };
   }, [dateKey, setError, setTodayPunches, setTodaySummary, timezone, upsertHistorySummary, userId]);
+
+  const fetchHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const data = await attendanceApi.getHistory(30);
+      setHistory(data);
+    } catch {
+      // history failure is non-critical
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [setHistory, setHistoryLoading]);
 
   const latestPunch = todayPunches.length > 0 ? todayPunches[0] : null;
   const isPunchedIn = latestPunch?.punchType === 'IN';
@@ -136,6 +149,9 @@ export function useAttendance() {
     punchesLoading: loading,
     summaryLoading: loading,
     recentPunches,
+    history,
+    historyLoading,
     punch,
+    fetchHistory,
   };
 }
