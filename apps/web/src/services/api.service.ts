@@ -1,7 +1,8 @@
 import axios, { AxiosError } from 'axios';
 import { firebaseAuth } from '@web/lib/firebase';
+import { env } from '@web/lib/env';
 
-const http = axios.create({ baseURL: '/api' });
+const http = axios.create({ baseURL: env.apiBaseUrl });
 
 http.interceptors.request.use(async (config) => {
   const user = firebaseAuth.currentUser;
