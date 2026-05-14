@@ -1,15 +1,20 @@
 {
   "version": 2,
-  "buildCommand": "npm run build --workspace=api",
-  "name": "wardsuite-hcm-api",
+  "builds": [
+    {
+      "src": "dist/main.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "dist/**"
+        ]
+      }
+    }
+  ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/dist/main.js"
-    },
-    {
       "src": "/(.*)",
-      "dest": "/api/dist/main.js"
+      "dest": "/dist/main.js"
     }
   ]
 }
