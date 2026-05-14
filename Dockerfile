@@ -3,17 +3,17 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy root package files
+# Copy root package files and tsconfig
 COPY package*.json ./
-COPY tsconfig.base.json ./
+COPY tsconfig.base.json tsconfig.json ./
 
-# Copy API app
+# Copy API app with all config files
 COPY apps/api ./apps/api
 
 # Install dependencies
 RUN npm install
 
-# Build API
+# Build API (tsc-alias will convert @api/* aliases to relative paths)
 RUN npm run build:api
 
 # Runtime stage
@@ -33,9 +33,9 @@ COPY apps/api/package*.json ./apps/api/
 # Copy built dist from builder
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
-# Install production dependencies only
-RUN npm install --production && \
-    npm install --workspace=api --production
+# Install production dependencies (root + api)
+RUN npm install --production --no-audit --no-fund && \
+    cd ./apps/api && npm install --production --no-audit --no-fund
 
 # Expose port
 EXPOSE 3000
