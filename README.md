@@ -128,7 +128,10 @@ npm run dev
 | `npm run build` | Build API + Web |
 | `npm run build:api` | Build API only |
 | `npm run build:web` | Build Web only |
+| `npm run check` | Typecheck + lint + format check (full CI gate) |
 | `npm run typecheck` | Typecheck API + Web |
+| `npm run typecheck:api` | Typecheck API only |
+| `npm run typecheck:web` | Typecheck Web only |
 | `npm run lint` | Lint TypeScript/TSX source files |
 | `npm run lint:fix` | Auto-fix lint issues where possible |
 | `npm run format` | Format app files with Prettier |
@@ -143,6 +146,77 @@ npm run dev
 | `npm run clean` | Remove build output directories |
 
 ---
+
+## Deployment
+
+The system runs as two independently deployed units:
+
+| Service | Host | URL |
+|---|---|---|
+| Frontend (SPA) | Firebase Hosting | `https://hcm.wardvisual.com` |
+| API | Docker · DigitalOcean VPS | `https://hcmapi.wardvisual.com` |
+
+---
+
+### Frontend — Firebase Hosting
+
+The React SPA is built with the production API base URL injected at build time, then deployed to Firebase Hosting.
+
+**1. Set production env vars**
+
+Create `.env.production` (or export inline):
+
+```env
+VITE_API_BASE_URL=https://hcmapi.wardvisual.com/api
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
+VITE_FIREBASE_DATABASE_ID=...
+```
+
+**2. Build and deploy**
+
+```bash
+# Build + deploy to Firebase Hosting in one step
+npm run deploy:web
+```
+
+This runs `cross-env VITE_API_BASE_URL=https://hcmapi.wardvisual.com/api npm run build:web`, outputs to `dist/web/`, then runs `firebase deploy --only hosting`.
+
+**3. Deploy Firestore rules and indexes (when changed)**
+
+```bash
+npm run firebase:deploy:rules
+npm run firebase:deploy:indexes
+```
+
+**Hosting config** (`firebase.json`):
+- Public folder: `dist/web`
+- SPA fallback: all routes → `/index.html`
+
+---
+
+### API — Docker on DigitalOcean VPS
+
+The Express API runs inside a Docker container, fronted by a **Caddy** reverse proxy that handles TLS automatically via Let's Encrypt.
+
+#### Infrastructure
+
+```
+Internet
+  │
+  ▼
+Caddy (hcmapi.wardvisual.com)   ← TLS termination, gzip, security headers
+  │
+  ▼
+wardsuite-hcm-api:3000           ← Docker container (internal)
+  │
+  ▼
+Firebase Admin SDK → Firestore
+```
 
 ## API Response Contract
 
