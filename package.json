@@ -23,7 +23,15 @@
     "lint:fix": "eslint \"apps/**/src/**/*.{ts,tsx}\" --fix",
     "format": "prettier --write \"apps/**/*.{ts,tsx,json,css}\"",
     "format:check": "prettier --check \"apps/**/*.{ts,tsx,json,css}\"",
-    "clean": "rimraf apps/api/dist apps/web/dist"
+    "clean": "rimraf apps/api/dist apps/web/dist",
+    "docker:build": "docker build -t wardsuite-hcm .",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f api",
+    "docker:restart": "docker-compose restart api",
+    "deploy": "docker-compose up -d --build --force-recreate --remove-orphans",
+    "deploy:logs": "docker-compose logs -f",
+    "deploy:stop": "docker-compose down --remove-orphans"
   },
   "keywords": [
     "hcm",
