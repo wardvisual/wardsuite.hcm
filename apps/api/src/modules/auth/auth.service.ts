@@ -1,6 +1,6 @@
 import * as admin from 'firebase-admin';
 import { getDb } from '@api/core/database/firestore.client';
-import { LoginDto, RegisterDto, LoginResult } from './auth.dto';
+import { LoginDto, RegisterDto, LoginResult, UpdateProfileDto } from './auth.dto';
 import { User } from '@api/types';
 
 export class AuthService {
@@ -85,6 +85,29 @@ export class AuthService {
         schedule: user.schedule,
       },
     };
+  }
+
+  async updateProfile(uid: string, dto: UpdateProfileDto): Promise<User> {
+    const userDoc = await this.db.collection('users').doc(uid).get();
+    if (!userDoc.exists) throw Object.assign(new Error('User not found'), { statusCode: 404 });
+
+    const current = userDoc.data() as User;
+    const now = new Date().toISOString();
+    const updates: Partial<User> = { updatedAt: now };
+
+    if (dto.name) updates.name = dto.name;
+    if (dto.timezone) updates.timezone = dto.timezone;
+    if (dto.schedule) {
+      updates.schedule = {
+        start: dto.schedule.start ?? current.schedule.start,
+        end: dto.schedule.end ?? current.schedule.end,
+        breakMinutes: dto.schedule.breakMinutes ?? current.schedule.breakMinutes,
+        graceMinutes: dto.schedule.graceMinutes ?? current.schedule.graceMinutes,
+      };
+    }
+
+    await this.db.collection('users').doc(uid).update(updates);
+    return { ...current, ...updates };
   }
 
   async getMe(uid: string): Promise<User> {

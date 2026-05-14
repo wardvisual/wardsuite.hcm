@@ -37,6 +37,19 @@ export class AuthController {
     }
   }
 
+  async updateProfile(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user?.id) {
+        res.status(401).json(error('Unauthorized', 401));
+        return;
+      }
+      const user = await this.service.updateProfile(req.user.id, req.body);
+      res.status(200).json(success(user, 'Profile updated successfully'));
+    } catch (err: any) {
+      res.status(err.statusCode ?? 500).json(error(err.message));
+    }
+  }
+
   async logout(_req: Request, res: Response): Promise<void> {
     // Firebase tokens are stateless; logout is handled client-side.
     res.status(200).json(success(null, 'Logged out successfully'));

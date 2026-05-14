@@ -20,6 +20,17 @@ export interface RegisterDto {
   };
 }
 
+export interface UpdateProfileDto {
+  name?: string;
+  timezone?: string;
+  schedule?: {
+    start?: string;
+    end?: string;
+    breakMinutes?: number;
+    graceMinutes?: number;
+  };
+}
+
 export interface LoginResult {
   token: string;
   user: {
