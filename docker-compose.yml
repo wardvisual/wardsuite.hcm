@@ -7,22 +7,20 @@ services:
     ports:
       - "3001:3000"
     environment:
-      # Firebase Admin SDK
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
       FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
-      
-      # API Configuration
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 3000
       CORS_ORIGIN: ${CORS_ORIGIN:-https://hcm.wardvisual.com}
-      
       LOG_LEVEL: ${LOG_LEVEL:-info}
-    
     restart: unless-stopped
     networks:
-      wardsuite-network:
-        external: true
-    
+      - wardsuite-network
+
 volumes:
   logs:
+
+networks:
+  wardsuite-network:
+    external: true
