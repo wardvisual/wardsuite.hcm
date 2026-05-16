@@ -38,11 +38,15 @@ function appendHistoryFilters(params: URLSearchParams, filters?: PunchHistoryFil
 }
 
 export const adminApi = {
-  getTodayPunches: (timezone = 'Asia/Manila', limit?: number) => {
+  getActiveDates: () =>
+    apiRequest.get<{ dateKeys: string[]; weekKeys: string[] }>('/attendance/admin/active-dates'),
+
+  getTodayPunches: (timezone = 'Asia/Manila', limit?: number, dateKey?: string) => {
     const params = new URLSearchParams({ timezone });
     if (Number.isFinite(limit) && limit && limit > 0) {
       params.set('limit', String(limit));
     }
+    if (dateKey) params.set('dateKey', dateKey);
     return apiRequest.get<AttendancePunch[]>(`/attendance/admin/today?${params.toString()}`);
   },
 

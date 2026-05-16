@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { adminApi } from '@web/modules/dashboard/api/admin.api';
 import { useDashboardStore } from '@web/modules/dashboard/store/dashboard.store';
 import type { AttendancePunch } from '@web/modules/attendance';
@@ -35,12 +35,15 @@ function groupByEmployee(punches: AttendancePunch[]): EmployeePunchRow[] {
 
 export function useAdminPunches() {
     const { punches, dispatchPunches } = useDashboardStore();
+    const [selectedDateKey, setSelectedDateKey] = useState(
+        () => new Date().toLocaleDateString('en-CA'),
+    );
 
     const fetchPunches = useCallback(async () => {
         dispatchPunches({ type: 'SET_LOADING', loading: true });
         dispatchPunches({ type: 'SET_ERROR', error: null });
         try {
-            const data = await adminApi.getTodayPunches('Asia/Manila');
+            const data = await adminApi.getTodayPunches('Asia/Manila', undefined, selectedDateKey);
             const nextPunches = Array.isArray(data) ? data : [];
             dispatchPunches({ type: 'SET_PUNCHES', punches: nextPunches });
         } catch (err: any) {
@@ -48,7 +51,7 @@ export function useAdminPunches() {
         } finally {
             dispatchPunches({ type: 'SET_LOADING', loading: false });
         }
-    }, [dispatchPunches]);
+    }, [dispatchPunches, selectedDateKey]);
 
     useEffect(() => {
         fetchPunches();
@@ -107,6 +110,8 @@ export function useAdminPunches() {
         punches,
         groupedPunches: groupByEmployee(punches.punches),
         fetchPunches,
+        selectedDateKey,
+        setSelectedDateKey,
         openEdit,
         openDelete,
         openHistory,

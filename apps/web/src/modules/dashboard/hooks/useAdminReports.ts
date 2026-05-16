@@ -1,9 +1,15 @@
 import { useCallback, useEffect } from 'react';
 import { adminApi } from '@web/modules/dashboard/api/admin.api';
 import { useDashboardStore } from '@web/modules/dashboard/store/dashboard.store';
+import { getTodayKey, getCurrentWeekKey } from '@web/lib/utils';
 
 export function useAdminReports() {
     const { reports, dispatchReports } = useDashboardStore();
+
+    useEffect(() => {
+        dispatchReports({ type: 'SET_DATE', dateKey: getTodayKey() });
+        dispatchReports({ type: 'SET_WEEK', weekKey: getCurrentWeekKey() });
+    }, [dispatchReports]);
 
     const fetchReport = useCallback(async () => {
         dispatchReports({ type: 'SET_LOADING', loading: true });

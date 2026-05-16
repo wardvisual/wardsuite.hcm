@@ -113,7 +113,7 @@ export function ReportTable({ mode, dailyData, weeklyData, loading, error, dateK
     ];
 
     return (
-        <div className="floating-card p-6">
+        <div className="p-2">
             {error && (
                 <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 p-3 text-sm text-red-600">{error}</div>
             )}

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, Clock3, Edit2, LogIn, LogOut, Plus } from 'lucide-react';
+import { CalendarDays, Clock3, Edit2, LogIn, LogOut, Plus, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Drawer, Modal } from '@web/components';
 import type { AttendancePunch } from '@web/modules/attendance';
 import { adminApi } from '@web/modules/dashboard/api/admin.api';
+import { ActivePeriodPicker } from '@web/modules/dashboard/components/admin/common/ActivePeriodPicker';
 import { cn, formatDetailedDateTime, formatTime } from '@web/lib/utils';
 
 interface HistoryModalProps {
@@ -52,8 +53,7 @@ export function HistoryModal({ open, userId, punches, employeeCode, onClose, onS
     const [hasMore, setHasMore] = useState(true);
     const [loadingInitial, setLoadingInitial] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
-    const [historyFromDate, setHistoryFromDate] = useState('');
-    const [historyToDate, setHistoryToDate] = useState('');
+    const [selectedDateKey, setSelectedDateKey] = useState('');
     const [historyPunchType, setHistoryPunchType] = useState<FilterPunchType>('ALL');
     const [mode, setMode] = useState<FormMode>(null);
     const [selectedPunchId, setSelectedPunchId] = useState<string | null>(null);
@@ -63,6 +63,9 @@ export function HistoryModal({ open, userId, punches, employeeCode, onClose, onS
     const [reason, setReason] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [deleteTargetPunch, setDeleteTargetPunch] = useState<AttendancePunch | null>(null);
+    const [deleteReason, setDeleteReason] = useState('');
+    const [deleting, setDeleting] = useState(false);
 
     const effectiveUserId = userId ?? history[0]?.userId ?? punches[0]?.userId ?? null;
     const sortedPunches = useMemo(() => history, [history]);
@@ -94,8 +97,8 @@ export function HistoryModal({ open, userId, punches, employeeCode, onClose, onS
                 PAGE_SIZE,
                 mode === 'more' ? nextCursor ?? undefined : undefined,
                 {
-                    fromDate: historyFromDate || undefined,
-                    toDate: historyToDate || undefined,
+                    fromDate: selectedDateKey || undefined,
+                    toDate: selectedDateKey || undefined,
                     punchType: historyPunchType === 'ALL' ? undefined : historyPunchType,
                 },
             );
@@ -112,7 +115,7 @@ export function HistoryModal({ open, userId, punches, employeeCode, onClose, onS
             setLoadingInitial(false);
             setLoadingMore(false);
         }
-    }, [effectiveUserId, hasMore, history.length, historyFromDate, historyPunchType, historyToDate, loadingInitial, loadingMore, nextCursor]);
+    }, [effectiveUserId, hasMore, history.length, selectedDateKey, historyPunchType, loadingInitial, loadingMore, nextCursor]);
 
     useEffect(() => {
         if (!open) {
@@ -122,8 +125,7 @@ export function HistoryModal({ open, userId, punches, employeeCode, onClose, onS
             setHistory([]);
             setNextCursor(null);
             setHasMore(true);
-            setHistoryFromDate('');
-            setHistoryToDate('');
+            setSelectedDateKey('');
             setHistoryPunchType('ALL');
             return;
         }
@@ -144,7 +146,7 @@ export function HistoryModal({ open, userId, punches, employeeCode, onClose, onS
     useEffect(() => {
         if (!open || !effectiveUserId) return;
         void loadHistory('refresh');
-    }, [open, effectiveUserId, historyFromDate, historyPunchType, historyToDate]);
+    }, [open, effectiveUserId, selectedDateKey, historyPunchType]);
 
     const startEdit = (punch: AttendancePunch) => {
         setMode('update');
@@ -171,6 +173,34 @@ export function HistoryModal({ open, userId, punches, employeeCode, onClose, onS
         setMode(null);
         setSelectedPunchId(null);
         setError(null);
+    };
+
+    const startDelete = (punch: AttendancePunch) => {
+        setDeleteTargetPunch(punch);
+        setDeleteReason('');
+        setError(null);
+    };
+
+    const cancelDelete = () => {
+        setDeleteTargetPunch(null);
+        setDeleteReason('');
+    };
+
+    const handleDelete = async () => {
+        if (!deleteTargetPunch) return;
+        setDeleting(true);
+        setError(null);
+        try {
+            await adminApi.deletePunch(deleteTargetPunch.id, deleteReason.trim() || 'Admin correction');
+            setDeleteTargetPunch(null);
+            setDeleteReason('');
+            await loadHistory('refresh');
+            onSaved();
+        } catch (err: any) {
+            setError(err.message ?? 'Failed to delete punch');
+        } finally {
+            setDeleting(false);
+        }
     };
 
     const handleSave = async () => {
@@ -210,36 +240,33 @@ export function HistoryModal({ open, userId, punches, employeeCode, onClose, onS
             className="sm:max-w-4xl lg:max-w-6xl"
         >
             <div className="space-y-4">
-                <div className="grid gap-3 rounded-3xl border border-[#f1f1f1] bg-[#fafafa] p-4 sm:grid-cols-3">
-                    <div>
-                        <label className="mb-1 block text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">From date</label>
-                        <input type="date" value={historyFromDate} onChange={(e) => setHistoryFromDate(e.target.value)} className="input-theme" />
+                <div className="flex flex-wrap items-center gap-3 rounded-3xl border border-[#f1f1f1] bg-[#fafafa] p-4">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">Date</span>
+                        <ActivePeriodPicker
+                            mode="daily"
+                            value={selectedDateKey}
+                            onChange={setSelectedDateKey}
+                            allowAll
+                        />
                     </div>
-                    <div>
-                        <label className="mb-1 block text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">To date</label>
-                        <input type="date" value={historyToDate} onChange={(e) => setHistoryToDate(e.target.value)} className="input-theme" />
-                    </div>
-                    <div>
-                        <label className="mb-1 block text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">Punch type</label>
-                        <select value={historyPunchType} onChange={(e) => setHistoryPunchType(e.target.value as FilterPunchType)} className="input-theme">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">Type</span>
+                        <select value={historyPunchType} onChange={(e) => setHistoryPunchType(e.target.value as FilterPunchType)} className="input-theme h-9 py-0 min-w-[80px]">
                             <option value="ALL">All</option>
                             <option value="IN">IN</option>
                             <option value="OUT">OUT</option>
                         </select>
                     </div>
-                    <div className="sm:col-span-3 flex justify-end">
+                    {(selectedDateKey || historyPunchType !== 'ALL') && (
                         <button
                             type="button"
-                            onClick={() => {
-                                setHistoryFromDate('');
-                                setHistoryToDate('');
-                                setHistoryPunchType('ALL');
-                            }}
-                            className="rounded-full border border-[#e5e7eb] bg-white px-4 py-2 text-xs font-bold text-[#111111]"
+                            onClick={() => { setSelectedDateKey(''); setHistoryPunchType('ALL'); }}
+                            className="ml-auto rounded-full border border-[#e5e7eb] bg-white px-4 py-2 text-xs font-bold text-[#111111]"
                         >
-                            Clear filters
+                            Clear
                         </button>
-                    </div>
+                    )}
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -333,9 +360,18 @@ export function HistoryModal({ open, userId, punches, employeeCode, onClose, onS
                                                 <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-bold', isIn ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600')}>
                                                     Employee {punch.employeeCode}
                                                 </span>
+                                                {punch.isEdited && (
+                                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 font-bold text-amber-700">
+                                                        Edited
+                                                    </span>
+                                                )}
                                                 <button type="button" onClick={() => startEdit(punch)} className="inline-flex items-center gap-1.5 rounded-full border border-[#e5e7eb] bg-white px-2.5 py-1 font-bold text-[#111111]">
                                                     <Edit2 className="h-3.5 w-3.5" />
                                                     Edit
+                                                </button>
+                                                <button type="button" onClick={() => startDelete(punch)} className="inline-flex items-center gap-1.5 rounded-full border border-red-100 bg-red-50 px-2.5 py-1 font-bold text-red-600">
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                    Delete
                                                 </button>
                                             </div>
                                         </div>
@@ -396,6 +432,38 @@ export function HistoryModal({ open, userId, punches, employeeCode, onClose, onS
                             <button type="button" onClick={cancelEdit} className="btn-secondary flex-1">Cancel</button>
                             <button type="button" onClick={handleSave} disabled={saving || !dateValue || !timeValue} className="btn-primary flex-1">
                                 {saving ? 'Saving…' : 'Save Correction'}
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+
+                <Modal
+                    open={!!deleteTargetPunch}
+                    onClose={cancelDelete}
+                    title="Delete Punch"
+                    description="Permanent and logged. The daily summary will be recomputed automatically."
+                    size="md"
+                >
+                    <div className="space-y-4">
+                        {error && (
+                            <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-medium text-red-600">
+                                {error}
+                            </div>
+                        )}
+                        <div>
+                            <label className="mb-1 block text-xs font-black uppercase tracking-wider text-[#6b7280]">Reason</label>
+                            <input
+                                type="text"
+                                value={deleteReason}
+                                onChange={(e) => setDeleteReason(e.target.value)}
+                                className="input-theme"
+                                placeholder="e.g. Duplicate entry, system error"
+                            />
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                            <button type="button" onClick={cancelDelete} className="btn-secondary flex-1">Cancel</button>
+                            <button type="button" onClick={handleDelete} disabled={deleting} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-red-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
+                                {deleting ? 'Deleting…' : 'Delete Punch'}
                             </button>
                         </div>
                     </div>

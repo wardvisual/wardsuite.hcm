@@ -4,6 +4,7 @@ import { useAdminReports } from '@web/modules/dashboard/hooks/useAdminReports';
 import { ReportFilters } from './reports/ReportFilters';
 import { ReportKpis } from './reports/ReportKpis';
 import { ReportTable } from './reports/ReportTable';
+import { InfoTooltip } from './common/InfoTooltip';
 import { exportDailyReportPDF, exportWeeklyReportPDF } from '@web/modules/dashboard/utils/pdf.utils';
 
 export function AdminReportsPanel() {
@@ -25,15 +26,17 @@ export function AdminReportsPanel() {
     return (
         <div className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <ReportFilters
+                <div className="flex items-center gap-2">
+                    <ReportFilters
                     mode={reports.mode}
                     dateKey={reports.dateKey}
                     weekKey={reports.weekKey}
                     onModeChange={setMode}
                     onDateChange={setDateKey}
                     onWeekChange={setWeekKey}
-                    onRefresh={fetchReport}
-                />
+                    />
+                    <InfoTooltip text="Only dates with recorded attendance punches are listed." />
+                </div>
 
                 <div className="flex items-center gap-2 shrink-0">
                     <button type="button" onClick={fetchReport} className="btn-secondary">

@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { CalendarDays, Clock3, LogIn, LogOut } from 'lucide-react';
+import { CalendarDays, ChevronDown, Clock3, LogIn, LogOut } from 'lucide-react';
 import { Drawer } from '@web/components';
 import { useAuthStore } from '@web/modules/auth/store/auth.store';
 import { attendanceApi } from '@web/modules/attendance/api/attendance.api';
 import type { AttendancePunch } from '@web/modules/attendance';
-import { cn, formatDetailedDateTime, formatTime } from '@web/lib/utils';
+import { cn, formatDateKey, formatDetailedDateTime, formatTime } from '@web/lib/utils';
 
 interface PunchHistoryDrawerProps {
     open: boolean;
@@ -16,19 +16,7 @@ const PAGE_SIZE = 20;
 const SCROLL_THRESHOLD_PX = 180;
 const MAX_RENDERED_PUNCHES = 60;
 
-type PunchHistoryCache = {
-    punches: AttendancePunch[];
-    nextCursor: string | null;
-    hasMore: boolean;
-};
-
-const punchHistoryCache = new Map<string, PunchHistoryCache>();
-
 type FilterPunchType = 'ALL' | 'IN' | 'OUT';
-
-function getCacheKey(userId: string | null, timezone: string, fromDate: string, toDate: string, punchType: FilterPunchType) {
-    return `${userId ?? 'guest'}_${timezone}_${fromDate || 'all'}_${toDate || 'all'}_${punchType}`;
-}
 
 function mergePunches(current: AttendancePunch[], next: AttendancePunch[]) {
     return [...new Map([...current, ...next].map((punch) => [punch.id, punch])).values()].sort(
@@ -42,12 +30,9 @@ function trimPunches(punches: AttendancePunch[]) {
 
 export function PunchHistoryDrawer({ open, onClose }: PunchHistoryDrawerProps) {
     const { user } = useAuthStore();
-    const timezone = user?.timezone ?? 'Asia/Manila';
     const userId = user?.uid ?? user?.id ?? null;
-    const [historyFromDate, setHistoryFromDate] = useState('');
-    const [historyToDate, setHistoryToDate] = useState('');
+    const [selectedDateKey, setSelectedDateKey] = useState('');
     const [historyPunchType, setHistoryPunchType] = useState<FilterPunchType>('ALL');
-    const cacheKey = useMemo(() => getCacheKey(userId, timezone, historyFromDate, historyToDate, historyPunchType), [historyFromDate, historyPunchType, historyToDate, timezone, userId]);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const [punches, setPunches] = useState<AttendancePunch[]>([]);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -56,30 +41,14 @@ export function PunchHistoryDrawer({ open, onClose }: PunchHistoryDrawerProps) {
     const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const persistCache = useCallback((nextPunches: AttendancePunch[], cursor: string | null, more: boolean) => {
-        punchHistoryCache.set(cacheKey, {
-            punches: trimPunches(nextPunches),
-            nextCursor: cursor,
-            hasMore: more,
-        });
-    }, [cacheKey]);
-
     const loadPage = useCallback(async (mode: 'refresh' | 'more') => {
-        if (!userId) {
-            return;
-        }
-
-        if (mode === 'more' && (!hasMore || loadingMore || loadingInitial)) {
-            return;
-        }
-
-        if (mode === 'refresh' && loadingMore) {
-            return;
-        }
+        if (!userId) return;
+        if (mode === 'more' && (!hasMore || loadingMore || loadingInitial)) return;
+        if (mode === 'refresh' && loadingMore) return;
 
         if (mode === 'more') {
             setLoadingMore(true);
-        } else if (punches.length === 0) {
+        } else {
             setLoadingInitial(true);
         }
 
@@ -90,17 +59,15 @@ export function PunchHistoryDrawer({ open, onClose }: PunchHistoryDrawerProps) {
                 PAGE_SIZE,
                 mode === 'more' ? nextCursor ?? undefined : undefined,
                 {
-                    fromDate: historyFromDate || undefined,
-                    toDate: historyToDate || undefined,
+                    fromDate: selectedDateKey || undefined,
+                    toDate: selectedDateKey || undefined,
                     punchType: historyPunchType === 'ALL' ? undefined : historyPunchType,
                 },
             );
 
             setPunches((current) => {
-                const merged = mode === 'more' ? mergePunches(current, page.items) : mergePunches(current, page.items);
-                const trimmed = trimPunches(merged);
-                persistCache(trimmed, page.nextCursor, page.hasMore);
-                return trimmed;
+                const merged = mode === 'more' ? mergePunches(current, page.items) : mergePunches([], page.items);
+                return trimPunches(merged);
             });
             setNextCursor(page.nextCursor);
             setHasMore(page.hasMore);
@@ -110,33 +77,23 @@ export function PunchHistoryDrawer({ open, onClose }: PunchHistoryDrawerProps) {
             setLoadingInitial(false);
             setLoadingMore(false);
         }
-    }, [hasMore, historyFromDate, historyPunchType, historyToDate, loadingInitial, loadingMore, nextCursor, punches.length, persistCache, timezone, userId]);
+    }, [hasMore, selectedDateKey, historyPunchType, loadingInitial, loadingMore, nextCursor, userId]);
 
     useEffect(() => {
-        if (!open) return;
-
-        if (!userId) {
-            setPunches([]);
-            setNextCursor(null);
-            setHasMore(false);
-            return;
-        }
-
-        const cached = punchHistoryCache.get(cacheKey);
-        if (cached) {
-            setPunches(cached.punches);
-            setNextCursor(cached.nextCursor);
-            setHasMore(cached.hasMore);
-            void loadPage('refresh');
-            return;
-        }
-
+        if (open) return;
         setPunches([]);
         setNextCursor(null);
         setHasMore(true);
+        setSelectedDateKey('');
+        setHistoryPunchType('ALL');
+        setError(null);
+    }, [open]);
 
+    useEffect(() => {
+        if (!open || !userId) return;
         void loadPage('refresh');
-    }, [cacheKey, loadPage, open, userId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, userId, selectedDateKey, historyPunchType]);
 
     const sortedPunches = useMemo(() => punches, [punches]);
 
@@ -156,36 +113,40 @@ export function PunchHistoryDrawer({ open, onClose }: PunchHistoryDrawerProps) {
             description="Employee punch history with date and punch-type filters."
         >
             <div className="space-y-4">
-                <div className="grid gap-3 rounded-3xl border border-[#f1f1f1] bg-[#fafafa] p-4 sm:grid-cols-3">
-                    <div>
-                        <label className="mb-1 block text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">From date</label>
-                        <input type="date" value={historyFromDate} onChange={(e) => setHistoryFromDate(e.target.value)} className="input-theme" />
+                <div className="flex flex-wrap items-center gap-3 rounded-3xl border border-[#f1f1f1] bg-[#fafafa] p-4">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">Date</span>
+                        <div className="relative inline-flex">
+                            <div className="flex items-center gap-2 h-9 rounded-2xl border border-[#e5e7eb] bg-white px-3 text-sm font-bold shadow-sm select-none transition-all hover:border-[#d1d5db] hover:shadow-md cursor-pointer text-[#111111]">
+                                <CalendarDays className="h-3.5 w-3.5 text-[#6b7280] shrink-0" />
+                                <span className="whitespace-nowrap">{selectedDateKey ? formatDateKey(selectedDateKey) : 'All dates'}</span>
+                                <ChevronDown className="h-3 w-3 text-[#9ca3af] shrink-0" />
+                            </div>
+                            <input
+                                type="date"
+                                value={selectedDateKey}
+                                onChange={(e) => setSelectedDateKey(e.target.value)}
+                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                            />
+                        </div>
                     </div>
-                    <div>
-                        <label className="mb-1 block text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">To date</label>
-                        <input type="date" value={historyToDate} onChange={(e) => setHistoryToDate(e.target.value)} className="input-theme" />
-                    </div>
-                    <div>
-                        <label className="mb-1 block text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">Punch type</label>
-                        <select value={historyPunchType} onChange={(e) => setHistoryPunchType(e.target.value as FilterPunchType)} className="input-theme">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">Type</span>
+                        <select value={historyPunchType} onChange={(e) => setHistoryPunchType(e.target.value as FilterPunchType)} className="input-theme h-9 py-0 min-w-[80px]">
                             <option value="ALL">All</option>
                             <option value="IN">IN</option>
                             <option value="OUT">OUT</option>
                         </select>
                     </div>
-                    <div className="sm:col-span-3 flex justify-end">
+                    {(selectedDateKey || historyPunchType !== 'ALL') && (
                         <button
                             type="button"
-                            onClick={() => {
-                                setHistoryFromDate('');
-                                setHistoryToDate('');
-                                setHistoryPunchType('ALL');
-                            }}
-                            className="rounded-full border border-[#e5e7eb] bg-white px-4 py-2 text-xs font-bold text-[#111111]"
+                            onClick={() => { setSelectedDateKey(''); setHistoryPunchType('ALL'); }}
+                            className="ml-auto rounded-full border border-[#e5e7eb] bg-white px-4 py-2 text-xs font-bold text-[#111111]"
                         >
-                            Clear filters
+                            Clear
                         </button>
-                    </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 rounded-3xl border border-[#f1f1f1] bg-[#fafafa] p-4">
