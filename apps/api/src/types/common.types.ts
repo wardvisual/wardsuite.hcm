@@ -1,3 +1,12 @@
+import { RequestHandler, Response } from 'express';
+
+export interface RouteDefinition {
+  method: 'get' | 'post' | 'patch' | 'delete';
+  path: string;
+  middleware?: RequestHandler[];
+  handler: (req: any, res: Response) => void;
+}
+
 /**
  * Common API Response Types
  */

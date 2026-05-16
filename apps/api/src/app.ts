@@ -1,8 +1,6 @@
 import express, { Application } from 'express';
 import cors from 'cors';
-import authRoutes from '@api/modules/auth/auth.routes';
-import usersRoutes from '@api/modules/users/users.routes';
-import attendanceRoutes from '@api/modules/attendance/attendance.routes';
+import { routes } from '@api/routes';
 import { errorHandler, notFoundHandler } from '@api/core/middleware/error.middleware';
 
 export class App {
@@ -32,9 +30,9 @@ export class App {
       res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
     });
 
-    this.app.use('/api/auth', authRoutes);
-    this.app.use('/api/users', usersRoutes);
-    this.app.use('/api/attendance', attendanceRoutes);
+    routes.forEach(({ path, handler, middleware = [] }) => {
+      this.app.use(path, ...middleware, handler);
+    });
   }
 
   private registerErrorHandlers(): void {

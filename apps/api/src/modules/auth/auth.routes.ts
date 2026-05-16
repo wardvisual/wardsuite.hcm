@@ -1,14 +1,44 @@
 import { Router } from 'express';
 import { AuthController } from './auth.controller';
-import { requireAuth } from '@api/core/middleware/auth.middleware';
+import { requireAuth, AuthenticatedRequest } from '@api/core/middleware/auth.middleware';
+import { RouteDefinition } from '@api/types';
 
 const router = Router();
 const controller = new AuthController();
 
-router.post('/register', (req, res) => controller.register(req, res));
-router.post('/login', (req, res) => controller.login(req, res));
-router.post('/logout', requireAuth, (req, res) => controller.logout(req, res));
-router.get('/me', requireAuth, (req, res) => controller.me(req as any, res));
-router.patch('/profile', requireAuth, (req, res) => controller.updateProfile(req as any, res));
+const routes: RouteDefinition[] = [
+  {
+    method: 'post',
+    path: '/register',
+    handler: (req, res) => controller.register(req, res),
+  },
+  {
+    method: 'post',
+    path: '/login',
+    handler: (req, res) => controller.login(req, res),
+  },
+  {
+    method: 'post',
+    path: '/logout',
+    middleware: [requireAuth],
+    handler: (req, res) => controller.logout(req, res),
+  },
+  {
+    method: 'get',
+    path: '/me',
+    middleware: [requireAuth],
+    handler: (req: AuthenticatedRequest, res) => controller.me(req, res),
+  },
+  {
+    method: 'patch',
+    path: '/profile',
+    middleware: [requireAuth],
+    handler: (req: AuthenticatedRequest, res) => controller.updateProfile(req, res),
+  },
+];
+
+routes.forEach(({ method, path, middleware = [], handler }) => {
+  router[method](path, ...middleware, handler);
+});
 
 export default router;

@@ -1,8 +1,6 @@
 import path from 'path';
 import dotenv from 'dotenv';
-// Defer loading application modules until after dotenv config so env vars are available.
 
-// Load root .env explicitly so running from the `apps/api` cwd picks up project vars.
 const envPath = path.resolve(__dirname, '../../../.env');
 dotenv.config({ path: envPath });
 console.error('[migrate] loaded env from', envPath, 'FIREBASE_PROJECT_ID=',
@@ -12,7 +10,6 @@ const { createMigrationRunner } = require('../src/core/database/migrations');
 const { env } = require('../src/lib/env');
 const admin = require('firebase-admin');
 
-// Initialize Firebase Admin similar to seed.ts so migrations can run standalone.
 if (!admin.apps.length) {
   const projectId = env.firebaseProjectId;
   const clientEmail = env.firebaseClientEmail;

@@ -1,11 +1,6 @@
-/**
- * Seed script: creates admin + 2 employee demo accounts in Firebase Auth + Firestore.
- * Run: npm run seed --workspace=api
- */
 import path from 'path';
 import dotenv from 'dotenv';
 
-// Load root .env explicitly so running from the `apps/api` cwd picks up project vars.
 const envPath = path.resolve(__dirname, '../../../.env');
 dotenv.config({ path: envPath });
 

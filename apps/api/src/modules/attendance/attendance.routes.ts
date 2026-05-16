@@ -1,50 +1,119 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '@api/core/middleware/auth.middleware';
 import { AttendanceController } from './attendance.controller';
+import { RouteDefinition } from '@api/types';
 
 const router = Router();
 const controller = new AttendanceController();
 
-// Employee — punch in/out
-router.post('/punch', requireAuth, (req, res) => controller.punch(req, res));
+const routes: RouteDefinition[] = [
+  // Employee — punch in/out
+  {
+    method: 'post',
+    path: '/punch',
+    middleware: [requireAuth],
+    handler: (req, res) => controller.punch(req, res),
+  },
 
-// Employee — read own data
-router.get('/today', requireAuth, (req, res) => controller.getTodayPunches(req, res));
-router.get('/today/page', requireAuth, (req, res) => controller.getTodayPunchPage(req, res));
-router.get('/history', requireAuth, (req, res) => controller.getHistory(req, res));
-router.get('/punch-history', requireAuth, (req, res) => controller.getPunchHistoryPage(req, res));
-router.get('/daily-summary/:dateKey', requireAuth, (req, res) => controller.getDailySummary(req, res));
-router.get('/punches/:punchId/history', requireAuth, (req, res) => controller.getPunchHistory(req, res));
+  // Employee — read own data
+  {
+    method: 'get',
+    path: '/today',
+    middleware: [requireAuth],
+    handler: (req, res) => controller.getTodayPunches(req, res),
+  },
+  {
+    method: 'get',
+    path: '/today/page',
+    middleware: [requireAuth],
+    handler: (req, res) => controller.getTodayPunchPage(req, res),
+  },
+  {
+    method: 'get',
+    path: '/history',
+    middleware: [requireAuth],
+    handler: (req, res) => controller.getHistory(req, res),
+  },
+  {
+    method: 'get',
+    path: '/punch-history',
+    middleware: [requireAuth],
+    handler: (req, res) => controller.getPunchHistoryPage(req, res),
+  },
+  {
+    method: 'get',
+    path: '/daily-summary/:dateKey',
+    middleware: [requireAuth],
+    handler: (req, res) => controller.getDailySummary(req, res),
+  },
+  {
+    method: 'get',
+    path: '/punches/:punchId/history',
+    middleware: [requireAuth],
+    handler: (req, res) => controller.getPunchHistory(req, res),
+  },
 
-// Admin / Manager — edit/delete punches
-router.get('/admin/today', requireAuth, requireRole('ADMIN', 'MANAGER'), (req, res) =>
-  controller.getAdminTodayPunches(req, res)
-);
-router.post('/admin/punch-corrections', requireAuth, requireRole('ADMIN', 'MANAGER'), (req, res) =>
-  controller.saveAdminPunchCorrection(req, res)
-);
-router.patch('/punches/:punchId', requireAuth, requireRole('ADMIN', 'MANAGER'), (req, res) =>
-  controller.adminEditPunch(req, res)
-);
-router.delete('/punches/:punchId', requireAuth, requireRole('ADMIN'), (req, res) =>
-  controller.adminDeletePunch(req, res)
-);
-router.get('/admin/employees/:userId/punches/page', requireAuth, requireRole('ADMIN', 'MANAGER'), (req, res) =>
-  controller.getEmployeePunchPage(req, res)
-);
-router.get('/admin/employees/:userId/punch-history', requireAuth, requireRole('ADMIN', 'MANAGER'), (req, res) =>
-  controller.getAdminEmployeePunchHistoryPage(req, res)
-);
-router.get('/admin/employees/:userId/punch-history/groups', requireAuth, requireRole('ADMIN', 'MANAGER'), (req, res) =>
-  controller.getAdminEmployeePunchHistoryGroups(req, res)
-);
+  // Admin / Manager — edit/delete punches
+  {
+    method: 'get',
+    path: '/admin/today',
+    middleware: [requireAuth, requireRole('ADMIN', 'MANAGER')],
+    handler: (req, res) => controller.getAdminTodayPunches(req, res),
+  },
+  {
+    method: 'post',
+    path: '/admin/punch-corrections',
+    middleware: [requireAuth, requireRole('ADMIN', 'MANAGER')],
+    handler: (req, res) => controller.saveAdminPunchCorrection(req, res),
+  },
+  {
+    method: 'patch',
+    path: '/punches/:punchId',
+    middleware: [requireAuth, requireRole('ADMIN', 'MANAGER')],
+    handler: (req, res) => controller.adminEditPunch(req, res),
+  },
+  {
+    method: 'delete',
+    path: '/punches/:punchId',
+    middleware: [requireAuth, requireRole('ADMIN')],
+    handler: (req, res) => controller.adminDeletePunch(req, res),
+  },
+  {
+    method: 'get',
+    path: '/admin/employees/:userId/punches/page',
+    middleware: [requireAuth, requireRole('ADMIN', 'MANAGER')],
+    handler: (req, res) => controller.getEmployeePunchPage(req, res),
+  },
+  {
+    method: 'get',
+    path: '/admin/employees/:userId/punch-history',
+    middleware: [requireAuth, requireRole('ADMIN', 'MANAGER')],
+    handler: (req, res) => controller.getAdminEmployeePunchHistoryPage(req, res),
+  },
+  {
+    method: 'get',
+    path: '/admin/employees/:userId/punch-history/groups',
+    middleware: [requireAuth, requireRole('ADMIN', 'MANAGER')],
+    handler: (req, res) => controller.getAdminEmployeePunchHistoryGroups(req, res),
+  },
 
-// Admin — reports
-router.get('/admin/daily-report', requireAuth, requireRole('ADMIN', 'MANAGER'), (req, res) =>
-  controller.getAdminDailyReport(req, res)
-);
-router.get('/admin/weekly-report', requireAuth, requireRole('ADMIN', 'MANAGER'), (req, res) =>
-  controller.getAdminWeeklyReport(req, res)
-);
+  // Admin — reports
+  {
+    method: 'get',
+    path: '/admin/daily-report',
+    middleware: [requireAuth, requireRole('ADMIN', 'MANAGER')],
+    handler: (req, res) => controller.getAdminDailyReport(req, res),
+  },
+  {
+    method: 'get',
+    path: '/admin/weekly-report',
+    middleware: [requireAuth, requireRole('ADMIN', 'MANAGER')],
+    handler: (req, res) => controller.getAdminWeeklyReport(req, res),
+  },
+];
+
+routes.forEach(({ method, path, middleware = [], handler }) => {
+  router[method](path, ...middleware, handler);
+});
 
 export default router;
