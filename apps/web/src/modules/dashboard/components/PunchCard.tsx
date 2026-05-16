@@ -1,6 +1,6 @@
 import React, { useReducer, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, LogIn, LogOut, Timer, Activity, AlertCircle, Circle } from 'lucide-react';
+import { ChevronRight, LogIn, LogOut, Timer, Activity, AlertCircle, Circle, Clock } from 'lucide-react';
 import type { AttendancePunch, DailySummary } from '@web/modules/attendance';
 import { formatTime } from '@web/lib/utils';
 import { PunchHistoryDrawer } from './PunchHistoryDrawer';
@@ -11,10 +11,185 @@ function LiveClock() {
     const id = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+  const hours = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).split(' ')[0];
+  const ampm = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).split(' ')[1];
+  const seconds = time.getSeconds().toString().padStart(2, '0');
   return (
-    <p className="text-4xl sm:text-5xl font-black text-[#111111] tabular-nums tracking-tight">
-      {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-    </p>
+    <div className="flex flex-col items-center lg:items-start">
+      <div className="flex items-end gap-1.5">
+        <span className="text-4xl sm:text-5xl font-black text-[#0f172a] tabular-nums tracking-tighter leading-none">
+          {hours}
+        </span>
+        <div className="flex flex-col items-start pb-0.5 gap-0">
+          <span className="text-xs font-black uppercase tracking-widest text-[#94a3b8] leading-tight">{ampm}</span>
+          <span className="text-xs font-bold tabular-nums text-[#cbd5e1] leading-tight">:{seconds}</span>
+        </div>
+      </div>
+      <p className="text-[11px] font-semibold text-[#94a3b8] tracking-wide mt-0.5">
+        {time.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+      </p>
+    </div>
+  );
+}
+
+interface StatusBadgeProps {
+  isPunchedIn: boolean;
+}
+
+function StatusBadge({ isPunchedIn }: StatusBadgeProps) {
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={String(isPunchedIn)}
+        initial={{ opacity: 0, y: -4, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 4, scale: 0.97 }}
+        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${isPunchedIn
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+          : 'border-slate-200 bg-slate-50 text-slate-500'
+          }`}
+      >
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${isPunchedIn ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'
+            }`}
+        />
+        {isPunchedIn ? 'Active Shift' : 'Not Clocked In'}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+interface TimeStampChipsProps {
+  todaySummary: DailySummary;
+  isPunchedIn: boolean;
+}
+
+function TimeStampChips({ todaySummary, isPunchedIn }: TimeStampChipsProps) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {todaySummary.firstIn && (
+        <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50/60 px-3 py-1.5 text-xs text-emerald-700">
+          <Timer className="w-3 h-3 text-emerald-500 shrink-0" />
+          <span className="font-semibold">Clock In</span>
+          <span className="font-black tabular-nums">{formatTime(todaySummary.firstIn)}</span>
+        </span>
+      )}
+      {!isPunchedIn && todaySummary.lastOut && (
+        <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs text-slate-600">
+          <Activity className="w-3 h-3 text-slate-400 shrink-0" />
+          <span className="font-semibold">Clock Out</span>
+          <span className="font-black tabular-nums">{formatTime(todaySummary.lastOut)}</span>
+        </span>
+      )}
+    </div>
+  );
+}
+
+interface RecentPunchRowProps {
+  punch: AttendancePunch;
+  index: number;
+}
+
+function RecentPunchRow({ punch, index }: RecentPunchRowProps) {
+  const isIn = punch.punchType === 'IN';
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -6 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.18 + index * 0.045, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      className="flex items-center gap-3 rounded-xl bg-white border border-[#f1f5f9] px-3 py-2.5"
+    >
+      <div
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl ${isIn ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'
+          }`}
+      >
+        {isIn ? <LogIn className="h-3.5 w-3.5" /> : <LogOut className="h-3.5 w-3.5" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-bold text-[#0f172a]">Punch {isIn ? 'In' : 'Out'}</p>
+        <p className="text-[11px] text-[#94a3b8] truncate">
+          {new Date(punch.timestamp).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+        </p>
+      </div>
+      <span
+        className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-black tabular-nums ${isIn ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+          }`}
+      >
+        {new Date(punch.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+      </span>
+    </motion.div>
+  );
+}
+
+interface RecentActivityPanelProps {
+  punches: AttendancePunch[];
+  onViewAll: () => void;
+}
+
+function RecentActivityPanel({ punches, onViewAll }: RecentActivityPanelProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.16, duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+      className="rounded-2xl border border-[#f1f5f9] bg-[#f8fafc] p-3"
+    >
+      {punches.length > 0 ? (
+        <>
+          <div className="mb-2.5 flex items-center justify-between gap-3">
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#94a3b8]">
+              Recent Activity
+            </p>
+            <button
+              type="button"
+              onClick={onViewAll}
+              className="inline-flex items-center gap-1 rounded-full border border-[#e2e8f0] bg-white px-2.5 py-1 text-[11px] font-bold text-[#64748b] shadow-sm hover:border-[#cbd5e1] hover:text-[#0f172a] transition-all duration-150 text-[14px]"
+            >
+              View all
+              <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            {punches.map((p, i) => (
+              <RecentPunchRow key={p.id} punch={p} index={i} />
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="flex items-center gap-2.5 py-2 text-xs text-[#94a3b8]">
+          <Clock className="h-3.5 w-3.5 text-[#cbd5e1]" />
+          No punches recorded yet today.
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+interface PunchTypeLegendProps { }
+
+function PunchTypeLegend(_: PunchTypeLegendProps) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <div className="flex items-center gap-2.5 rounded-2xl bg-emerald-50 border border-emerald-100/80 px-3 py-2.5">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-[0_2px_8px_rgba(5,150,105,0.30)]">
+          <LogIn className="h-3.5 w-3.5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-emerald-800">Punch In</p>
+          <p className="truncate text-[11px] text-emerald-600/70">Start or resume shift</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 px-3 py-2.5">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-[#0f172a] text-white shadow-[0_2px_8px_rgba(15,23,42,0.18)]">
+          <LogOut className="h-3.5 w-3.5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#0f172a]">Punch Out</p>
+          <p className="truncate text-[11px] text-[#94a3b8]">End the active window</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -32,14 +207,14 @@ function PunchButton({ action, isPunching, isPunchedIn, onPunch }: PunchButtonPr
       {isPunchedIn && (
         <>
           <motion.div
-            className="absolute h-44 w-44 rounded-full border-2 border-emerald-300 sm:h-52 sm:w-52 lg:h-60 lg:w-60"
-            animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
-            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeOut' }}
+            className="absolute h-40 w-40 rounded-full border border-emerald-300/60 sm:h-48 sm:w-48"
+            animate={{ scale: [1, 1.5], opacity: [0.6, 0] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeOut' }}
           />
           <motion.div
-            className="absolute h-44 w-44 rounded-full border-2 border-emerald-200 sm:h-52 sm:w-52 lg:h-60 lg:w-60"
-            animate={{ scale: [1, 1.8], opacity: [0.35, 0] }}
-            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeOut', delay: 0.6 }}
+            className="absolute h-40 w-40 rounded-full border border-emerald-200/40 sm:h-48 sm:w-48"
+            animate={{ scale: [1, 1.9], opacity: [0.4, 0] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeOut', delay: 0.7 }}
           />
         </>
       )}
@@ -50,57 +225,144 @@ function PunchButton({ action, isPunching, isPunchedIn, onPunch }: PunchButtonPr
         whileHover={{ scale: 1.04 }}
         whileTap={{ scale: 0.9 }}
         transition={{ type: 'spring', stiffness: 320, damping: 16 }}
-        animate={{
-          boxShadow: isPunching
-            ? [
-              '0_28px_70px_rgba(15,23,42,0.24)',
-              '0_34px_85px_rgba(16,185,129,0.28)',
-              '0_28px_70px_rgba(15,23,42,0.24)',
-            ]
-            : '0_28px_70px_rgba(15,23,42,0.24)',
-        }}
-        className={`relative z-10 flex h-48 w-48 cursor-pointer overflow-hidden flex-col items-center justify-center gap-2 rounded-full font-black text-white shadow-[0_28px_70px_rgba(15,23,42,0.24)] disabled:cursor-not-allowed disabled:opacity-60 sm:h-56 sm:w-56 lg:h-64 lg:w-64 ${isOut
-          ? 'bg-[#111111]'
-          : 'bg-emerald-600'
+        className={`relative z-10 flex h-40 w-40 cursor-pointer overflow-hidden flex-col items-center justify-center gap-2 rounded-full font-black text-white shadow-[0_24px_64px_rgba(15,23,42,0.20)] disabled:cursor-not-allowed disabled:opacity-50 sm:h-48 sm:w-48 ${isOut ? 'bg-[#0f172a]' : 'bg-emerald-600'
           }`}
       >
         <motion.div
           aria-hidden="true"
           className={`absolute inset-0 ${isOut
-            ? 'bg-[linear-gradient(120deg,#0f172a_0%,#334155_35%,#111827_70%,#64748b_100%)]'
-            : 'bg-[linear-gradient(120deg,#22c55e_0%,#14b8a6_35%,#10b981_70%,#84cc16_100%)]'
+            ? 'bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_40%,#334155_70%,#475569_100%)]'
+            : 'bg-[linear-gradient(135deg,#059669_0%,#10b981_35%,#14b8a6_65%,#22c55e_100%)]'
             }`}
-          animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-          transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+          animate={{ backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'] }}
+          transition={{ duration: 7, repeat: Infinity, ease: 'linear' }}
           style={{ backgroundSize: '200% 200%' }}
         />
         <AnimatePresence mode="wait">
           <motion.div
             key={action}
-            initial={{ opacity: 0, scale: 0.5, rotate: -15, y: 8 }}
+            initial={{ opacity: 0, scale: 0.5, rotate: -12, y: 8 }}
             animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
-            exit={{ opacity: 0, scale: 0.5, rotate: 15, y: -8 }}
+            exit={{ opacity: 0, scale: 0.5, rotate: 12, y: -8 }}
             transition={{ type: 'spring', stiffness: 460, damping: 20 }}
             className="relative z-10 flex flex-col items-center gap-2"
           >
             <div className="relative flex items-center justify-center">
-              {isOut ? <LogOut className="h-7 w-7 sm:h-8 sm:w-8" /> : <LogIn className="h-7 w-7 sm:h-8 sm:w-8" />}
+              <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isOut ? 'bg-white/10' : 'bg-white/15'}`}>
+                {isOut ? <LogOut className="h-5 w-5 sm:h-6 sm:w-6" /> : <LogIn className="h-5 w-5 sm:h-6 sm:w-6" />}
+              </div>
               {isPunching && (
                 <motion.span
                   initial={{ opacity: 0, scale: 0.6 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.6 }}
-                  className="absolute -right-2 -top-2 h-4 w-4 rounded-full border-2 border-white/40 border-t-white"
-                  style={{ animation: 'spin 0.75s linear infinite' }}
+                  className="absolute -right-1.5 -top-1.5 h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin"
                 />
               )}
             </div>
-            <span className="text-[11px] font-black uppercase tracking-[0.22em] sm:text-xs">
+            <span className="text-[10px] font-black uppercase tracking-[0.24em] sm:text-[11px]">
               {isOut ? 'Punch Out' : 'Punch In'}
             </span>
           </motion.div>
         </AnimatePresence>
       </motion.button>
+    </motion.div>
+  );
+}
+
+interface NextActionBadgeProps {
+  nextAction: 'IN' | 'OUT';
+}
+
+function NextActionBadge({ nextAction }: NextActionBadgeProps) {
+  return (
+    <div className="absolute -top-4 left-1/2 z-10 -translate-x-1/2">
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold shadow-sm whitespace-nowrap ${nextAction === 'IN'
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+          : 'border-slate-200 bg-white text-slate-600'
+          }`}
+      >
+        <Circle
+          className={`h-2 w-2 fill-current ${nextAction === 'IN' ? 'text-emerald-500' : 'text-slate-400'}`}
+        />
+        Next: {nextAction === 'IN' ? 'Punch In' : 'Punch Out'}
+      </span>
+    </div>
+  );
+}
+
+interface PunchButtonSectionProps {
+  nextAction: 'IN' | 'OUT';
+  isPunching: boolean;
+  isPunchedIn: boolean;
+  punchImpact: boolean;
+  onPunch: () => void;
+}
+
+function PunchButtonSection({ nextAction, isPunching, isPunchedIn, punchImpact, onPunch }: PunchButtonSectionProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96, x: 10 }}
+      animate={{ opacity: 1, scale: 1, x: 0 }}
+      transition={{ delay: 0.1, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="order-1 flex flex-col items-center gap-4 lg:order-2"
+    >
+      <div className="lg:hidden">
+        <LiveClock />
+      </div>
+
+      <div className="relative pt-6">
+        <NextActionBadge nextAction={nextAction} />
+        <motion.div
+          animate={
+            punchImpact
+              ? { scale: [1, 0.91, 1.07, 1], rotate: [0, -1.5, 1.5, 0] }
+              : { scale: 1, rotate: 0 }
+          }
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {punchImpact && (
+            <motion.div
+              initial={{ opacity: 0.8, scale: 0.5 }}
+              animate={{ opacity: 0, scale: 1.8 }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              className="pointer-events-none absolute inset-0 rounded-full bg-emerald-400/25 blur-2xl"
+            />
+          )}
+          <PunchButton
+            action={nextAction}
+            isPunching={isPunching}
+            isPunchedIn={isPunchedIn}
+            onPunch={onPunch}
+          />
+        </motion.div>
+      </div>
+
+      <p className="text-[14px] text-[#94a3b8] font-bold text-center max-w-[140px] leading-relaxed">
+        {isPunchedIn
+          ? 'Tap to record your clock-out'
+          : 'Tap to begin your shift'}
+      </p>
+    </motion.div>
+  );
+}
+
+interface ErrorBannerProps {
+  error: string;
+}
+
+function ErrorBanner({ error }: ErrorBannerProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 6 }}
+      transition={{ duration: 0.22 }}
+      className="mt-5 flex items-start gap-2.5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-xs text-red-600"
+    >
+      <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+      <span className="leading-relaxed">{error}</span>
     </motion.div>
   );
 }
@@ -116,11 +378,20 @@ interface PunchCardProps {
 }
 
 export function PunchCard({
-  recentPunches, todaySummary, isPunchedIn, nextAction, isPunching, error, onPunch,
+  recentPunches,
+  todaySummary,
+  isPunchedIn,
+  nextAction,
+  isPunching,
+  error,
+  onPunch,
 }: PunchCardProps) {
   const [punchImpact, setPunchImpact] = useState(false);
   const [ui, dispatch] = useReducer(
-    (state: { historyOpen: boolean }, action: { type: 'OPEN_HISTORY' | 'CLOSE_HISTORY' }) => {
+    (
+      state: { historyOpen: boolean },
+      action: { type: 'OPEN_HISTORY' | 'CLOSE_HISTORY' },
+    ) => {
       if (action.type === 'OPEN_HISTORY') return { historyOpen: true };
       return { historyOpen: false };
     },
@@ -140,204 +411,77 @@ export function PunchCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="floating-card p-5 sm:p-7"
+      className="floating-card overflow-hidden"
     >
-      <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:items-center">
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.05, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="order-2 min-w-0 space-y-5 lg:order-1"
-        >
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <motion.span
-                animate={{ scale: isPunchedIn ? [1, 1.08, 1] : 1 }}
-                transition={{ duration: 1.8, repeat: isPunchedIn ? Infinity : 0, ease: 'easeInOut' }}
-                className={`h-2.5 w-2.5 rounded-full ${isPunchedIn ? 'bg-emerald-500' : 'bg-[#bbbbbb]'}`}
-              />
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={String(isPunchedIn)}
-                  initial={{ opacity: 0, y: -6 }}
+      <div className="h-1 w-full bg-[linear-gradient(90deg,#059669_0%,#10b981_50%,#14b8a6_100%)]" />
+
+      <div className="p-5 sm:p-6">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.05, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="order-2 min-w-0 space-y-4 lg:order-1"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1.5 min-w-0">
+                <StatusBadge isPunchedIn={isPunchedIn} />
+                <motion.h2
+                  initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 6 }}
-                  transition={{ duration: 0.22 }}
-                  className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-bold ${isPunchedIn
-                    ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
-                    : 'border-[#ebebeb] bg-[#f5f5f5] text-[#6b7280]'
-                    }`}
+                  transition={{ delay: 0.08, duration: 0.3 }}
+                  className="text-xl font-black tracking-tight text-[#0f172a] sm:text-2xl leading-snug"
                 >
-                  {isPunchedIn ? 'Currently Clocked In' : 'Not Clocked In'}
-                </motion.div>
-              </AnimatePresence>
+                  {isPunchedIn ? 'You are currently clocked in' : 'Ready to start your shift?'}
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.12 }}
+                  className="text-sm text-[#94a3b8] leading-relaxed"
+                >
+                  {isPunchedIn
+                    ? 'Use Punch Out when your shift ends.'
+                    : 'Use Punch In to begin tracking your attendance.'}
+                </motion.p>
+              </div>
+              <div className="hidden lg:block shrink-0">
+                <LiveClock />
+              </div>
             </div>
 
-            <motion.h2
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.08, duration: 0.3 }}
-              className={`text-2xl w-max font-black tracking-tight text-[#111111] sm:text-3xl ${isPunchedIn ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
-                : 'border-[#ebebeb] bg-[#f5f5f5] text-[#6b7280]'}`}
-            >
-              {isPunchedIn ? 'You are currently clocked in' : 'Ready to start your shift?'}
-            </motion.h2>
-
-            <motion.p
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.12, duration: 0.3 }}
-              className="max-w-2xl text-sm leading-6 text-[#6b7280]"
-            >
-              {isPunchedIn
-                ? 'Use Punch Out when your shift ends. The latest punch activity updates instantly below.'
-                : 'Use Punch In to begin tracking your attendance for today. Your punch history updates in real time.'}
-            </motion.p>
-          </div>
-
-          <div className="flex flex-wrap gap-4 text-xs text-[#6b7280]">
             {todaySummary && (
               <motion.div
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.16, duration: 0.25 }}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#fafafa] px-3 py-1.5"
+                transition={{ delay: 0.14 }}
               >
-                <Timer className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="font-bold">In:</span>
-                <span>{formatTime(todaySummary.firstIn)}</span>
+                <TimeStampChips todaySummary={todaySummary} isPunchedIn={isPunchedIn} />
               </motion.div>
             )}
-            {!isPunchedIn && todaySummary?.lastOut && (
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.25 }}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#fafafa] px-3 py-1.5"
-              >
-                <Activity className="w-3.5 h-3.5 text-[#aaaaaa]" />
-                <span className="font-bold">Out:</span>
-                <span>{formatTime(todaySummary.lastOut)}</span>
-              </motion.div>
-            )}
-          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.18, duration: 0.3 }}
-            className="max-w-2xl rounded-3xl border border-[#f5f5f5] bg-[#fafafa] p-4"
-          >
+            <RecentActivityPanel
+              punches={displayPunches}
+              onViewAll={() => dispatch({ type: 'OPEN_HISTORY' })}
+            />
 
-            {displayPunches.length > 0 ? (
-              <>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.22em] text-[#bbbbbb]">Punch History</p>
-                    <p className="mt-1 text-xs text-[#6b7280]">Showing your 4 most recent punches. Tap View more to open the full punch timeline.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => dispatch({ type: 'OPEN_HISTORY' })}
-                    className="cursor-pointer rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-xs font-bold text-[#111111] shadow-sm transition-colors hover:border-[#d1d5db] hover:bg-[#f9fafb] hover:text-[#6b7280]"
-                  >
-                    <span className="inline-flex items-center gap-1.5">
-                      View more
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </span>
-                  </button>
-                </div>
-                <div className="space-y-1.5">
-                  {displayPunches.map((p, i) => (
-                    <motion.div
-                      key={p.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 + i * 0.05, duration: 0.25 }}
-                      className="flex items-center gap-2.5 rounded-2xl bg-white px-3 py-2 shadow-[0_1px_0_rgba(15,23,42,0.03)]"
-                    >
-                      <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${p.punchType === 'IN' ? 'bg-emerald-50 text-emerald-600' : 'bg-[#f0f0f0] text-[#6b7280]'
-                        }`}>
-                        {p.punchType === 'IN' ? <LogIn className="h-3 w-3" /> : <LogOut className="h-3 w-3" />}
-                      </div>
-                      <span className="flex-1 text-xs text-[#6b7280]">Punch {p.punchType}</span>
-                      <span className="text-xs font-bold tabular-nums text-[#111111]">
-                        {new Date(p.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                      </span>
-                    </motion.div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-[#e5e7eb] bg-white px-4 py-6 text-sm text-[#9ca3af]">
-                No punches recorded yet today.
-              </div>
-            )}
+            <PunchTypeLegend />
           </motion.div>
 
-          <div className="grid max-w-2xl gap-2 rounded-3xl border border-[#f1f1f1] bg-white p-3 sm:grid-cols-2">
-            <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 px-3 py-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
-                <LogIn className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="whitespace-nowrap text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">Punch In</p>
-                <p className="truncate text-xs text-emerald-700/80">Start or resume tracked time</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-2xl bg-[#f5f5f5] px-3 py-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#111111] text-white">
-                <LogOut className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="whitespace-nowrap text-[11px] font-black uppercase tracking-[0.16em] text-[#111111]">Punch Out</p>
-                <p className="truncate text-xs text-[#6b7280]">End the active shift window</p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+          <PunchButtonSection
+            nextAction={nextAction}
+            isPunching={isPunching}
+            isPunchedIn={isPunchedIn}
+            punchImpact={punchImpact}
+            onPunch={handlePunch}
+          />
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96, x: 12 }}
-          animate={{ opacity: 1, scale: 1, x: 0 }}
-          transition={{ delay: 0.12, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="order-1 flex justify-center lg:order-2 lg:justify-end lg:self-stretch"
-        >
-          <motion.div
-            animate={punchImpact ? { scale: [1, 0.92, 1.06, 1], rotate: [0, -2, 2, 0] } : { scale: 1 }}
-            transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
-            className="relative flex h-full w-full items-center justify-center py-3"
-          >
-            <div className="absolute top-0 right-0 hidden items-center gap-2 rounded-full border border-[#f1f1f1] bg-white px-3 py-1.5 text-[11px] font-bold text-[#6b7280] shadow-sm lg:flex">
-              <Circle className={`h-2.5 w-2.5 fill-current ${nextAction === 'IN' ? 'text-emerald-500' : 'text-[#111111]'}`} />
-              Next: {nextAction === 'IN' ? 'Punch In' : 'Punch Out'}
-            </div>
-            {punchImpact && (
-              <motion.div
-                initial={{ opacity: 0.9, scale: 0.55 }}
-                animate={{ opacity: 0, scale: 1.7 }}
-                transition={{ duration: 0.45, ease: 'easeOut' }}
-                className="pointer-events-none absolute inset-0 rounded-full bg-emerald-400/20 blur-xl"
-              />
-            )}
-            <PunchButton action={nextAction} isPunching={isPunching} isPunchedIn={isPunchedIn} onPunch={handlePunch} />
-          </motion.div>
-        </motion.div>
+        <AnimatePresence>
+          {error && <ErrorBanner error={error} />}
+        </AnimatePresence>
       </div>
-
-      <AnimatePresence>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            className="mt-5 flex items-center gap-2 rounded-2xl border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-600"
-          >
-            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-            {error}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <PunchHistoryDrawer
         open={ui.historyOpen}
