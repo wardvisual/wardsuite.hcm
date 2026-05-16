@@ -3,7 +3,8 @@ import { useAuthStore } from '@web/modules/auth/store/auth.store';
 import { useAttendanceStore } from '@web/modules/attendance/store/attendance.store';
 import { attendanceApi } from '@web/modules/attendance/api/attendance.api';
 
-export function useDashboard() {
+export function useDashboard(options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true;
   const { user } = useAuthStore();
   const timezone = user?.timezone ?? 'Asia/Manila';
   const userId = user?.uid ?? user?.id ?? null;
@@ -14,7 +15,7 @@ export function useDashboard() {
   useEffect(() => {
     let cancelled = false;
 
-    if (!userId) {
+    if (!userId || !enabled) {
       setHistory([]);
       setHistoryLoading(false);
       return;
@@ -42,7 +43,7 @@ export function useDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [setHistory, setHistoryLoading, userId]);
+  }, [enabled, setHistory, setHistoryLoading, userId]);
 
   return { user, history, last7, timezone, historyLoading };
 }
