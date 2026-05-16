@@ -106,11 +106,21 @@ export class AttendanceController {
     }
   };
 
+  getActiveDates = async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const data = await this.service.getActiveDates();
+      res.status(200).json(success(data));
+    } catch (err: any) {
+      res.status(err.statusCode ?? 500).json(error(err.message));
+    }
+  };
+
   getAdminTodayPunches = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const timezone = (req.query.timezone as string) ?? 'Asia/Manila';
       const limit = req.query.limit ? Number(req.query.limit) : undefined;
-      const data = await this.service.getAdminTodayPunches(timezone, limit);
+      const targetDate = (req.query.dateKey as string) ?? undefined;
+      const data = await this.service.getAdminTodayPunches(timezone, limit, targetDate);
       res.status(200).json(success(data));
     } catch (err: any) {
       res.status(err.statusCode ?? 500).json(error(err.message));

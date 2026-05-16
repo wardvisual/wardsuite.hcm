@@ -4,6 +4,7 @@ import { migration002 } from './002_create_attendance_collection';
 import { migration003 } from './003_create_daily_summary_collection';
 import { migration004 } from './004_create_attendance_history_collection';
 import { migration005 } from './005_create_weekly_summary_collection';
+import { migration006 } from './006_add_canpunch_to_users';
 
 export function createMigrationRunner(): MigrationRunner {
   const runner = new MigrationRunner();
@@ -12,5 +13,6 @@ export function createMigrationRunner(): MigrationRunner {
   runner.register(migration003);
   runner.register(migration004);
   runner.register(migration005);
+  runner.register(migration006);
   return runner;
 }

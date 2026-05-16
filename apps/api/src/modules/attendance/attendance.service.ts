@@ -33,6 +33,10 @@ export class AttendanceService {
     if (!userDoc.exists) throw httpError('User not found', 404);
     const user = userDoc.data() as User;
 
+    if ((user.role === 'ADMIN' || user.role === 'MANAGER') && !user.canPunch) {
+      throw httpError('Admin and manager accounts cannot punch. Enable punch access in user settings to allow it.', 403);
+    }
+
     const now = new Date();
     const timezone = dto.timezone ?? user.timezone ?? 'Asia/Manila';
     const dateKey = getDateKey(now, timezone);
@@ -195,45 +199,33 @@ export class AttendanceService {
     };
   }
 
-  async getAdminTodayPunches(timezone: string, limit?: number): Promise<AttendancePunch[]> {
-    const dateKey = getDateKey(new Date(), timezone);
-    const pageSize = getPageSize(limit, Number.MAX_SAFE_INTEGER);
-    const batchSize = Math.min(Math.max(pageSize, 100), 500);
-    const items: AttendancePunch[] = [];
-    let cursorSnap: FirebaseFirestore.DocumentSnapshot | null = null;
-
-    while (items.length < pageSize) {
-      let query = this.db.collection('attendance').orderBy('timestamp', 'desc').limit(batchSize);
-      if (cursorSnap) {
-        query = query.startAfter(cursorSnap);
-      }
-
-      const snap = await query.get();
-      const docs = filterSchemaDocs(snap.docs);
-      if (docs.length === 0) break;
-
-      let hitOlderDay = false;
-      for (const doc of docs) {
-        const punch = mapDoc<AttendancePunch>(doc);
-        cursorSnap = doc;
-
-        if (punch.dateKey === dateKey) {
-          items.push(punch);
-          if (items.length >= pageSize) {
-            break;
-          }
-        } else {
-          hitOlderDay = true;
-          break;
-        }
-      }
-
-      if (hitOlderDay || docs.length < batchSize) {
-        break;
-      }
+  async getActiveDates(): Promise<{ dateKeys: string[]; weekKeys: string[] }> {
+    const snap = await this.db.collection('dailySummary').get();
+    const dateSet = new Set<string>();
+    const weekSet = new Set<string>();
+    for (const doc of filterSchemaDocs(snap.docs)) {
+      const data = doc.data() as DailySummary;
+      if (data.dateKey) dateSet.add(data.dateKey);
+      if (data.weekKey) weekSet.add(data.weekKey);
     }
+    return {
+      dateKeys: [...dateSet].sort((a, b) => b.localeCompare(a)),
+      weekKeys: [...weekSet].sort((a, b) => b.localeCompare(a)),
+    };
+  }
 
-    return items;
+  async getAdminTodayPunches(timezone: string, limit?: number, targetDate?: string): Promise<AttendancePunch[]> {
+    const dateKey = targetDate ?? getDateKey(new Date(), timezone);
+
+    const snap = await this.db.collection('attendance')
+      .where('dateKey', '==', dateKey)
+      .get();
+
+    const punches = filterSchemaDocs(snap.docs)
+      .map(mapDoc<AttendancePunch>)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    return Number.isFinite(limit) && limit && limit > 0 ? punches.slice(0, limit) : punches;
   }
 
   async getDailySummary(userId: string, dateKey: string): Promise<DailySummary | null> {

@@ -17,6 +17,7 @@ export interface User extends BaseEntity {
   status: 'active' | 'inactive';
   schedule: Schedule;
   createdBy?: string;
+  canPunch?: boolean;
 }
 
 export interface CreateUserDto {
@@ -34,4 +35,5 @@ export interface UpdateUserDto {
   timezone?: string;
   status?: 'active' | 'inactive';
   schedule?: Partial<Schedule>;
+  canPunch?: boolean;
 }

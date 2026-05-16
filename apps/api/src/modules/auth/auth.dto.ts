@@ -29,6 +29,7 @@ export interface UpdateProfileDto {
     breakMinutes?: number;
     graceMinutes?: number;
   };
+  canPunch?: boolean;
 }
 
 export interface LoginResult {
@@ -43,5 +44,6 @@ export interface LoginResult {
     timezone: string;
     status: string;
     schedule: { start: string; end: string; breakMinutes: number; graceMinutes: number };
+    canPunch?: boolean;
   };
 }

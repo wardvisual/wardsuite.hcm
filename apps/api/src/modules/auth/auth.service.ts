@@ -11,7 +11,6 @@ export class AuthService {
     let uid: string;
 
     if (dto.firebaseUid) {
-      // Client already created the Firebase Auth user — just create the Firestore profile
       uid = dto.firebaseUid;
     } else if (dto.password) {
       const firebaseUser = await this.auth.createUser({
@@ -24,7 +23,6 @@ export class AuthService {
       throw Object.assign(new Error('Either firebaseUid or password is required'), { statusCode: 400 });
     }
 
-    // Auto-generate employee code based on user count
     const existingSnap = await this.db.collection('users').count().get();
     const count = existingSnap.data().count + 1;
     const employeeCode = `EMP-${String(count).padStart(4, '0')}`;
@@ -56,7 +54,6 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<LoginResult> {
-    // dto.password holds the Firebase ID token from the client-side Firebase Auth SDK
     const decodedToken = await this.auth.verifyIdToken(dto.password);
 
     const userDoc = await this.db.collection('users').doc(decodedToken.uid).get();
@@ -83,6 +80,7 @@ export class AuthService {
         timezone: user.timezone,
         status: user.status,
         schedule: user.schedule,
+        canPunch: user.canPunch,
       },
     };
   }
@@ -105,6 +103,7 @@ export class AuthService {
         graceMinutes: dto.schedule.graceMinutes ?? current.schedule.graceMinutes,
       };
     }
+    if (dto.canPunch !== undefined) updates.canPunch = dto.canPunch;
 
     await this.db.collection('users').doc(uid).update(updates);
     return { ...current, ...updates };

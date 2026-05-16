@@ -97,6 +97,14 @@ const routes: RouteDefinition[] = [
     handler: (req, res) => controller.getAdminEmployeePunchHistoryGroups(req, res),
   },
 
+  // Admin — active dates for picker
+  {
+    method: 'get',
+    path: '/admin/active-dates',
+    middleware: [requireAuth, requireRole('ADMIN', 'MANAGER')],
+    handler: (req, res) => controller.getActiveDates(req, res),
+  },
+
   // Admin — reports
   {
     method: 'get',
