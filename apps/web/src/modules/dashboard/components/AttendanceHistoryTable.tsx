@@ -1,7 +1,10 @@
+import { useState } from 'react';
+import { CalendarDays, ChevronDown, X } from 'lucide-react';
 import { DataTable, StatusBadge } from '@web/components';
 import type { Column } from '@web/components';
 import type { DailySummary } from '@web/modules/attendance';
-import { formatDateKey, formatHours, formatMinutes, formatTime } from '@web/lib/utils';
+import { cn, formatDateKey, formatHours, formatMinutes, formatTime } from '@web/lib/utils';
+
 function statusVariant(s: string): 'success' | 'warning' | 'danger' | 'neutral' {
   if (s === 'present') return 'success';
   if (s === 'late') return 'warning';
@@ -55,13 +58,53 @@ interface AttendanceHistoryTableProps {
 }
 
 export function AttendanceHistoryTable({ data, isLoading }: AttendanceHistoryTableProps) {
+  const [filterDate, setFilterDate] = useState('');
+
+  const filtered = filterDate
+    ? data.filter((r) => r.dateKey === filterDate)
+    : data;
+
   return (
-    <DataTable
-      columns={columns}
-      data={data}
-      keyExtractor={(r) => r.id}
-      isLoading={isLoading}
-      emptyMessage="No attendance records yet"
-    />
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="relative inline-flex">
+          <div className={cn(
+            'flex items-center gap-2 h-8 rounded-2xl border px-3 text-xs font-bold select-none transition-all cursor-pointer',
+            filterDate
+              ? 'border-[#111111] bg-[#111111] text-white'
+              : 'border-[#e5e7eb] bg-white text-[#6b7280] shadow-sm hover:border-[#d1d5db]',
+          )}>
+            <CalendarDays className="h-3 w-3 shrink-0" />
+            <span className="whitespace-nowrap">{filterDate ? formatDateKey(filterDate) : 'Filter by date'}</span>
+            {!filterDate && <ChevronDown className="h-3 w-3 text-[#9ca3af] shrink-0" />}
+          </div>
+          <input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+          />
+        </div>
+
+        {filterDate && (
+          <button
+            type="button"
+            onClick={() => setFilterDate('')}
+            className="inline-flex items-center gap-1 h-8 rounded-2xl border border-[#e5e7eb] bg-white px-2.5 text-xs font-bold text-[#6b7280] shadow-sm hover:border-[#d1d5db] hover:text-[#111111]"
+          >
+            <X className="h-3 w-3" />
+            Clear
+          </button>
+        )}
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={filtered}
+        keyExtractor={(r) => r.id}
+        isLoading={isLoading}
+        emptyMessage={filterDate ? `No record for ${formatDateKey(filterDate)}` : 'No attendance records yet'}
+      />
+    </div>
   );
 }
