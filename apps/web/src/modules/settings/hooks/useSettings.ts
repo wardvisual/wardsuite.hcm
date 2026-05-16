@@ -29,6 +29,7 @@ export function useSettings() {
                     graceMinutes: payload.schedule.graceMinutes ?? user.schedule.graceMinutes,
                   }
                 : user.schedule,
+              canPunch: payload.canPunch !== undefined ? payload.canPunch : user.canPunch,
             },
             token,
           );

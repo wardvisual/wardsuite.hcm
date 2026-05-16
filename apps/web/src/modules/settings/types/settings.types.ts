@@ -9,4 +9,5 @@ export interface UpdateProfilePayload {
   name?: string;
   timezone?: string;
   schedule?: Partial<ScheduleSettings>;
+  canPunch?: boolean;
 }

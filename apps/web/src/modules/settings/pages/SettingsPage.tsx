@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { User, Clock, Save, CheckCircle2, AlertCircle } from 'lucide-react';
+import { User, Clock, Save, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useSettings } from '../hooks/useSettings';
 
 const TIMEZONES = [
@@ -15,6 +15,8 @@ const TIMEZONES = [
 export default function SettingsPage() {
   const { user, isSaving, error, successMessage, saveProfile } = useSettings();
 
+  const isAdminOrManager = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+
   const [form, setForm] = useState({
     name: user?.name ?? '',
     timezone: user?.timezone ?? 'Asia/Manila',
@@ -22,6 +24,7 @@ export default function SettingsPage() {
     scheduleEnd: user?.schedule?.end ?? '18:00',
     breakMinutes: user?.schedule?.breakMinutes ?? 60,
     graceMinutes: user?.schedule?.graceMinutes ?? 5,
+    canPunch: user?.canPunch ?? false,
   });
 
   useEffect(() => {
@@ -33,17 +36,18 @@ export default function SettingsPage() {
         scheduleEnd: user.schedule.end,
         breakMinutes: user.schedule.breakMinutes,
         graceMinutes: user.schedule.graceMinutes,
+        canPunch: user.canPunch ?? false,
       });
     }
   }, [user?.uid]);
 
   const set =
     <K extends keyof typeof form>(k: K) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-      setForm((f) => ({
-        ...f,
-        [k]: e.target.type === 'number' ? Number(e.target.value) : e.target.value,
-      }));
+      (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+        setForm((f) => ({
+          ...f,
+          [k]: e.target.type === 'number' ? Number(e.target.value) : e.target.value,
+        }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +60,7 @@ export default function SettingsPage() {
         breakMinutes: form.breakMinutes,
         graceMinutes: form.graceMinutes,
       },
+      ...(isAdminOrManager && { canPunch: form.canPunch }),
     });
   };
 
@@ -163,6 +168,33 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+
+          {isAdminOrManager && (
+            <div className="border-t border-[#f1f1f1] pt-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                    <ShieldCheck className="h-4 w-4 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-[#111111]">Record Own Punches</p>
+                    <p className="mt-1 text-xs text-[#6b7280]">
+                      Allow this {user?.role?.toLowerCase()} account to clock in and out. Disabled by default.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, canPunch: !f.canPunch }))}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${form.canPunch ? 'bg-emerald-500' : 'bg-[#e5e7eb]'}`}
+                  role="switch"
+                  aria-checked={form.canPunch}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${form.canPunch ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+            </div>
+          )}
 
           {successMessage && (
             <motion.div
