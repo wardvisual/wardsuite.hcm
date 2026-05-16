@@ -3,8 +3,11 @@ import { CheckCircle2, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EASE_OUT, TRUST_BADGES } from '../landing.data';
 import { MockAppCard } from './MockAppCard';
+import { useAuthStore } from '@web/modules/auth/store/auth.store';
 
 export function HeroSection() {
+    const { isAuthenticated } = useAuthStore();
+
     return (
         <section className="bg-white">
             <div className="mx-auto max-w-7xl px-4 pb-20 pt-16 sm:px-6 lg:px-8 lg:pb-28 lg:pt-24">
@@ -36,13 +39,23 @@ export function HeroSection() {
                         </p>
 
                         <div className="flex flex-wrap items-center gap-3">
-                            <Link
-                                to="/auth/register"
-                                className="inline-flex items-center gap-2 rounded-full bg-[#111111] px-7 py-3 text-sm font-black text-white shadow-[0_2px_10px_rgba(15,23,42,0.16)] transition-all duration-150 hover:opacity-90 active:scale-95"
-                            >
-                                Get started free
-                                <ChevronRight className="h-4 w-4" />
-                            </Link>
+                            {isAuthenticated ? (
+                                <Link
+                                    to="/dashboard"
+                                    className="inline-flex items-center gap-2 rounded-full bg-[#111111] px-7 py-3 text-sm font-black text-white shadow-[0_2px_10px_rgba(15,23,42,0.16)] transition-all duration-150 hover:opacity-90 active:scale-95"
+                                >
+                                    Go to Dashboard
+                                    <ChevronRight className="h-4 w-4" />
+                                </Link>
+                            ) : (
+                                <Link
+                                    to="/auth/register"
+                                    className="inline-flex items-center gap-2 rounded-full bg-[#111111] px-7 py-3 text-sm font-black text-white shadow-[0_2px_10px_rgba(15,23,42,0.16)] transition-all duration-150 hover:opacity-90 active:scale-95"
+                                >
+                                    Get started free
+                                    <ChevronRight className="h-4 w-4" />
+                                </Link>
+                            )}
                         </div>
 
                         <div className="flex flex-wrap gap-5">
