@@ -21,7 +21,7 @@
 @layer components {
   /* Cards */
   .floating-card {
-    @apply bg-white border border-[#f0f0f0] rounded-[28px] shadow-[0_8px_40px_-8px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_60px_-12px_rgba(0,0,0,0.09)] transition-all duration-500 ease-in-out;
+    @apply bg-white rounded-[20px] shadow-[0_2px_40px_-8px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_60px_-12px_rgba(0,0,0,0.09)] transition-all duration-500 ease-in-out;
   }
 
   .glass-card {

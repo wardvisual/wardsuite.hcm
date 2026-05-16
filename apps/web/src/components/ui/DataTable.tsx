@@ -137,7 +137,7 @@ export function DataTable<TData>({
         </div>
       )}
 
-      <div className="border-[#f0f0f0] bg-white shadow-[0_4px_24px_rgba(0,0,0,0.04)] border rounded-[24px] overflow-hidden">
+      <div className="floating-card overflow-hidden">
         <div className="overflow-x-auto overscroll-x-contain">
           <table className="w-full min-w-[720px] table-auto border-collapse text-left">
             <thead className="border-[#f1f1f1] bg-[#fafafa] border-b">

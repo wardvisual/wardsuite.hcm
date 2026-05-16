@@ -15,6 +15,7 @@ export interface AuthUser {
     breakMinutes: number;
     graceMinutes: number;
   };
+  canPunch?: boolean;
   createdAt: string;
   updatedAt: string;
 }

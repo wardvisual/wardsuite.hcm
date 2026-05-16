@@ -20,7 +20,7 @@ export function Shell({ children }: ShellProps) {
   const roleLabel = user?.role === 'ADMIN' ? 'Administrator' : user?.role === 'MANAGER' ? 'Manager' : 'Employee';
 
   return (
-    <div className="min-h-screen bg-[#fafafa] flex">
+    <div className="min-h-screen bg-white/30 flex">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <main className="flex-1 lg:ml-[280px] flex flex-col h-screen overflow-hidden">
