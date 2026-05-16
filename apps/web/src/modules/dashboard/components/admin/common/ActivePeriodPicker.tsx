@@ -11,6 +11,8 @@ interface ActivePeriodPickerProps {
   className?: string;
   /** Allow empty string value, displayed as "All dates" */
   allowAll?: boolean;
+  /** When provided, skips the API fetch and uses these keys directly */
+  staticOptions?: string[];
 }
 
 function formatWeekKey(weekKey: string): string {
@@ -27,14 +29,15 @@ function safeFormatDate(value: string): string {
  * Standalone date/week picker that fetches only periods with attendance records.
  * Self-contained — owns its own loading state and API call.
  */
-export function ActivePeriodPicker({ mode, value, onChange, className, allowAll }: ActivePeriodPickerProps) {
+export function ActivePeriodPicker({ mode, value, onChange, className, allowAll, staticOptions }: ActivePeriodPickerProps) {
   const [dateKeys, setDateKeys] = useState<string[]>([]);
   const [weekKeys, setWeekKeys] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!staticOptions);
   const today = getTodayKey();
   const isToday = value === today;
 
   useEffect(() => {
+    if (staticOptions) return;
     let cancelled = false;
     setLoading(true);
     adminApi.getActiveDates()
@@ -49,9 +52,9 @@ export function ActivePeriodPicker({ mode, value, onChange, className, allowAll 
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [staticOptions]);
 
-  const options = mode === 'daily' ? dateKeys : weekKeys;
+  const options = staticOptions ?? (mode === 'daily' ? dateKeys : weekKeys);
   const formatOption = mode === 'daily' ? safeFormatDate : formatWeekKey;
   const currentValueInList = value ? options.includes(value) : false;
   const displayValue = value ? formatOption(value) : 'All dates';

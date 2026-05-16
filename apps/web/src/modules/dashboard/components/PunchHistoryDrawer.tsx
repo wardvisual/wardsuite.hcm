@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { CalendarDays, ChevronDown, Clock3, LogIn, LogOut } from 'lucide-react';
+import { CalendarDays, Clock3, LogIn, LogOut } from 'lucide-react';
 import { Drawer } from '@web/components';
 import { useAuthStore } from '@web/modules/auth/store/auth.store';
 import { attendanceApi } from '@web/modules/attendance/api/attendance.api';
 import type { AttendancePunch } from '@web/modules/attendance';
-import { cn, formatDateKey, formatDetailedDateTime, formatTime } from '@web/lib/utils';
+import { ActivePeriodPicker } from '@web/modules/dashboard/components/admin/common/ActivePeriodPicker';
+import { cn, formatDetailedDateTime, formatTime } from '@web/lib/utils';
 
 interface PunchHistoryDrawerProps {
     open: boolean;
@@ -92,10 +93,15 @@ export function PunchHistoryDrawer({ open, onClose }: PunchHistoryDrawerProps) {
     useEffect(() => {
         if (!open || !userId) return;
         void loadPage('refresh');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, userId, selectedDateKey, historyPunchType]);
 
     const sortedPunches = useMemo(() => punches, [punches]);
+
+    const availableDates = useMemo(
+        () => [...new Set(punches.map((p) => p.dateKey))].sort((a, b) => b.localeCompare(a)),
+        [punches],
+    );
 
     const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
         const element = event.currentTarget;
@@ -116,19 +122,13 @@ export function PunchHistoryDrawer({ open, onClose }: PunchHistoryDrawerProps) {
                 <div className="flex flex-wrap items-center gap-3 rounded-3xl border border-[#f1f1f1] bg-[#fafafa] p-4">
                     <div className="flex items-center gap-2">
                         <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">Date</span>
-                        <div className="relative inline-flex">
-                            <div className="flex items-center gap-2 h-9 rounded-2xl border border-[#e5e7eb] bg-white px-3 text-sm font-bold shadow-sm select-none transition-all hover:border-[#d1d5db] hover:shadow-md cursor-pointer text-[#111111]">
-                                <CalendarDays className="h-3.5 w-3.5 text-[#6b7280] shrink-0" />
-                                <span className="whitespace-nowrap">{selectedDateKey ? formatDateKey(selectedDateKey) : 'All dates'}</span>
-                                <ChevronDown className="h-3 w-3 text-[#9ca3af] shrink-0" />
-                            </div>
-                            <input
-                                type="date"
-                                value={selectedDateKey}
-                                onChange={(e) => setSelectedDateKey(e.target.value)}
-                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                            />
-                        </div>
+                        <ActivePeriodPicker
+                            mode="daily"
+                            value={selectedDateKey}
+                            onChange={setSelectedDateKey}
+                            allowAll
+                            staticOptions={availableDates}
+                        />
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#bbbbbb]">Type</span>

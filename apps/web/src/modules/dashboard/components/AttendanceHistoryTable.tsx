@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { CalendarDays, ChevronDown, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { X } from 'lucide-react';
 import { DataTable, StatusBadge } from '@web/components';
 import type { Column } from '@web/components';
 import type { DailySummary } from '@web/modules/attendance';
-import { cn, formatDateKey, formatHours, formatMinutes, formatTime } from '@web/lib/utils';
+import { ActivePeriodPicker } from '@web/modules/dashboard/components/admin/common/ActivePeriodPicker';
+import { formatDateKey, formatHours, formatMinutes, formatTime } from '@web/lib/utils';
 
 function statusVariant(s: string): 'success' | 'warning' | 'danger' | 'neutral' {
   if (s === 'present') return 'success';
@@ -60,6 +61,11 @@ interface AttendanceHistoryTableProps {
 export function AttendanceHistoryTable({ data, isLoading }: AttendanceHistoryTableProps) {
   const [filterDate, setFilterDate] = useState('');
 
+  const availableDates = useMemo(
+    () => [...new Set(data.map((r) => r.dateKey))].sort((a, b) => b.localeCompare(a)),
+    [data],
+  );
+
   const filtered = filterDate
     ? data.filter((r) => r.dateKey === filterDate)
     : data;
@@ -67,24 +73,13 @@ export function AttendanceHistoryTable({ data, isLoading }: AttendanceHistoryTab
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <div className="relative inline-flex">
-          <div className={cn(
-            'flex items-center gap-2 h-8 rounded-2xl border px-3 text-xs font-bold select-none transition-all cursor-pointer',
-            filterDate
-              ? 'border-[#111111] bg-[#111111] text-white'
-              : 'border-[#e5e7eb] bg-white text-[#6b7280] shadow-sm hover:border-[#d1d5db]',
-          )}>
-            <CalendarDays className="h-3 w-3 shrink-0" />
-            <span className="whitespace-nowrap">{filterDate ? formatDateKey(filterDate) : 'Filter by date'}</span>
-            {!filterDate && <ChevronDown className="h-3 w-3 text-[#9ca3af] shrink-0" />}
-          </div>
-          <input
-            type="date"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-          />
-        </div>
+        <ActivePeriodPicker
+          mode="daily"
+          value={filterDate}
+          onChange={setFilterDate}
+          allowAll
+          staticOptions={availableDates}
+        />
 
         {filterDate && (
           <button
