@@ -8,9 +8,11 @@ export default function App() {
     <Router>
       <AuthComponent.FirebaseAuthSync />
       <Routes>
-        {publicRoutes.map((route) => (
-          <Route key={route.path} path={route.path} element={route.element} />
-        ))}
+        <Route element={<AuthComponent.GuestGuard />}>
+          {publicRoutes.map((route) => (
+            <Route key={route.path} path={route.path} element={route.element} />
+          ))}
+        </Route>
 
         <Route
           path="/*"
