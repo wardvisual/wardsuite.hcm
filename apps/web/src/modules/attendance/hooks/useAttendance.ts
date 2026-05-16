@@ -14,7 +14,8 @@ function normalizePunches(punches: AttendancePunch[]): AttendancePunch[] {
   );
 }
 
-export function useAttendance() {
+export function useAttendance(options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true;
   const { user } = useAuthStore();
   const [recentPunches, setRecentPunches] = useState<AttendancePunch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +33,7 @@ export function useAttendance() {
   useEffect(() => {
     let cancelled = false;
 
-    if (!userId) {
+    if (!userId || !enabled) {
       setTodayPunches([]);
       setTodaySummary(null);
       setRecentPunches([]);
@@ -74,7 +75,7 @@ export function useAttendance() {
     return () => {
       cancelled = true;
     };
-  }, [dateKey, setError, setTodayPunches, setTodaySummary, timezone, upsertHistorySummary, userId]);
+  }, [dateKey, enabled, setError, setTodayPunches, setTodaySummary, timezone, upsertHistorySummary, userId]);
 
   const fetchHistory = useCallback(async () => {
     setHistoryLoading(true);
