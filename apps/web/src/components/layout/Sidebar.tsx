@@ -16,7 +16,6 @@ import { authApi } from '@web/services/auth.api';
 
 const employeeNav = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: Clock, label: 'Attendance', path: '/attendance' },
 ];
 
 const adminNav = [
